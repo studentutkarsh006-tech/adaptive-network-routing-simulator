@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>How to Play | NETROUTE</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/how-to-play.css">
+</head>
+
+<body class="how-to-play-page">
+
+    <div class="page-container">
+
+        <!-- Navigation -->
+        <header class="topbar">
+
+            <a href="index.html" class="brand">
+                <span class="brand-mark">⚡</span>
+
+                <span>
+                    <span class="brand-name">NETROUTE</span>
+                    <span class="brand-sub">NETWORK LAB</span>
+                </span>
+            </a>
+
+            <nav class="main-nav">
+
+                <a href="index.html" class="nav-link">
+                    Home
+                </a>
+
+                <a href="#" class="nav-link">
+                    Network Lab
+                </a>
+
+                <a href="#" class="nav-link">
+                    Modes
+                </a>
+
+                <a href="learn.html" class="nav-link">
+                    Learn
+                </a>
+
+                <a href="#" class="nav-link">
+                    Quiz
+                </a>
+
+            </nav>
+
+            <div class="top-actions">
+
+                <a
+                    href="how-to-play.html"
+                    class="nav-link utility-link active"
+                >
+                    How to Play
+                </a>
+
+                <a href="#" class="nav-link utility-link">
+                    Settings
+                </a>
+
+                <button
+                    class="mobile-menu-btn"
+                    id="mobileMenuBtn"
+                    aria-label="Open menu"
+                >
+                    ☰
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <main>
+
+            <!-- Hero -->
+            <section class="guide-hero">
+
+                <div class="hero-grid"></div>
+
+                <div class="hero-copy">
+
+                    <div class="eyebrow">
+                        <span class="eyebrow-dot"></span>
+                        MISSION CONTROL
+                    </div>
+
+                    <h1>
+                        LEARN TO
+                        <span>ROUTE.</span>
+                    </h1>
+
+                    <p>
+                        NETROUTE turns networking into a hands-on mission.
+                        Send packets, understand paths, break routes,
+                        and learn how the network recovers.
+                    </p>
+
+                    <div class="hero-actions">
+
+                        <a
+                            href="#mission-steps"
+                            class="btn btn-primary"
+                        >
+                            SEE HOW IT WORKS →
+                        </a>
+
+                        <a
+                            href="learn.html"
+                            class="btn btn-secondary"
+                        >
+                            OPEN LEARN
+                        </a>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Animated mission preview -->
+                <div class="mission-preview">
+
+                    <div class="preview-header">
+
+                        <span>
+                            MISSION FLOW
+                        </span>
+
+                        <span class="preview-status">
+                            LIVE
+                        </span>
+
+                    </div>
+
+
+                    <div class="preview-network">
+
+                        <svg
+                            viewBox="0 0 700 300"
+                            aria-label="Animated packet route"
+                        >
+
+                            <line
+                                class="guide-link"
+                                x1="70"
+                                y1="150"
+                                x2="210"
+                                y2="75"
+                            />
+
+                            <line
+                                class="guide-link"
+                                x1="210"
+                                y1="75"
+                                x2="390"
+                                y2="75"
+                            />
+
+                            <line
+                                class="guide-link"
+                                x1="210"
+                                y1="75"
+                                x2="390"
+                                y2="225"
+                            />
+
+                            <line
+                                class="guide-link"
+                                x1="210"
+                                y1="225"
+                                x2="390"
+                                y2="225"
+                            />
+
+                            <line
+                                class="guide-link"
+                                x1="390"
+                                y1="75"
+                                x2="610"
+                                y2="150"
+                            />
+
+                            <line
+                                class="guide-link"
+                                x1="390"
+                                y1="225"
+                                x2="610"
+                                y2="150"
+                            />
+
+
+                            <circle
+                                class="guide-router"
+                                cx="70"
+                                cy="150"
+                                r="22"
+                            />
+
+                            <circle
+                                class="guide-router"
+                                cx="210"
+                                cy="75"
+                                r="22"
+                            />
+
+                            <circle
+                                class="guide-router"
+                                cx="210"
+                                cy="225"
+                                r="22"
+                            />
+
+                            <circle
+                                class="guide-router"
+                                cx="390"
+                                cy="75"
+                                r="22"
+                            />
+
+                            <circle
+                                class="guide-router"
+                                cx="390"
+                                cy="225"
+                                r="22"
+                            />
+
+                            <circle
+                                class="guide-router destination"
+                                cx="610"
+                                cy="150"
+                                r="22"
+                            />
+
+
+                            <circle
+                                id="guidePacket"
+                                class="guide-packet"
+                                cx="70"
+                                cy="150"
+                                r="7"
+                            />
+
+
+                            <text
+                                x="70"
+                                y="195"
+                                class="router-label"
+                            >
+                                R1
+                            </text>
+
+                            <text
+                                x="210"
+                                y="40"
+                                class="router-label"
+                            >
+                                R2
+                            </text>
+
+                            <text
+                                x="210"
+                                y="265"
+                                class="router-label"
+                            >
+                                R3
+                            </text>
+
+                            <text
+                                x="390"
+                                y="40"
+                                class="router-label"
+                            >
+                                R4
+                            </text>
+
+                            <text
+                                x="390"
+                                y="265"
+                                class="router-label"
+                            >
+                                R5
+                            </text>
+
+                            <text
+                                x="610"
+                                y="195"
+                                class="router-label"
+                            >
+                                R6
+                            </text>
+
+                        </svg>
+
+                    </div>
+
+                    <div class="preview-route">
+                        <span>R1</span>
+                        <i>→</i>
+                        <span>R2</span>
+                        <i>→</i>
+                        <span>R4</span>
+                        <i>→</i>
+                        <span>R6</span>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- Core loop -->
+            <section
+                class="guide-section"
+                id="mission-steps"
+            >
+
+                <div class="section-heading">
+
+                    <div class="eyebrow">
+                        THE CORE LOOP
+                    </div>
+
+                    <h2>
+                        SIX STEPS.
+                        <span>ONE MISSION.</span>
+                    </h2>
+
+                    <p>
+                        Every NETROUTE mission follows the same basic idea.
+                        The challenge is what happens when the network changes.
+                    </p>
+
+                </div>
+
+
+                <div class="step-grid">
+
+                    <article class="step-card">
+
+                        <div class="step-number">
+                            01
+                        </div>
+
+                        <div class="step-icon">
+                            ◎
+                        </div>
+
+                        <h3>
+                            Choose a Network
+                        </h3>
+
+                        <p>
+                            Start with a network topology and identify the
+                            source, destination, routers, and available links.
+                        </p>
+
+                    </article>
+
+
+                    <article class="step-card">
+
+                        <div class="step-number">
+                            02
+                        </div>
+
+                        <div class="step-icon">
+                            →
+                        </div>
+
+                        <h3>
+                            Send the Packet
+                        </h3>
+
+                        <p>
+                            Launch a packet from the source and watch it
+                            travel through the network.
+                        </p>
+
+                    </article>
+
+
+                    <article class="step-card">
+
+                        <div class="step-number">
+                            03
+                        </div>
+
+                        <div class="step-icon">
+                            ◇
+                        </div>
+
+                        <h3>
+                            Follow the Route
+                        </h3>
+
+                        <p>
+                            Observe which routers the packet visits and
+                            understand how a path connects the network.
+                        </p>
+
+                    </article>
+
+
+                    <article class="step-card">
+
+                        <div class="step-number">
+                            04
+                        </div>
+
+                        <div class="step-icon danger">
+                            ×
+                        </div>
+
+                        <h3>
+                            Break the Network
+                        </h3>
+
+                        <p>
+                            Take a router or link offline and see what
+                            happens to the original route.
+                        </p>
+
+                    </article>
+
+
+                    <article class="step-card">
+
+                        <div class="step-number">
+                            05
+                        </div>
+
+                        <div class="step-icon recovery">
+                            ↻
+                        </div>
+
+                        <h3>
+                            Watch Recovery
+                        </h3>
+
+                        <p>
+                            The network searches for another available
+                            route instead of simply giving up.
+                        </p>
+
+                    </article>
+
+
+                    <article class="step-card">
+
+                        <div class="step-number">
+                            06
+                        </div>
+
+                        <div class="step-icon">
+                            ✓
+                        </div>
+
+                        <h3>
+                            Understand Why
+                        </h3>
+
+                        <p>
+                            Inspect the route, cost, algorithm, and network
+                            changes behind the final decision.
+                        </p>
+
+                    </article>
+
+                </div>
+
+            </section>
+
+
+            <!-- Rules -->
+            <section class="rules-section">
+
+                <div class="rules-card">
+
+                    <div class="rules-label">
+                        NETWORK LAB RULES
+                    </div>
+
+                    <h2>
+                        KEEP THE PACKET ALIVE.
+                    </h2>
+
+                    <div class="rules-list">
+
+                        <div class="rule-item">
+                            <span>01</span>
+                            <p>
+                                A packet needs a path to reach its destination.
+                            </p>
+                        </div>
+
+                        <div class="rule-item">
+                            <span>02</span>
+                            <p>
+                                Failed routers and links can change that path.
+                            </p>
+                        </div>
+
+                        <div class="rule-item">
+                            <span>03</span>
+                            <p>
+                                Multiple paths can exist between the same endpoints.
+                            </p>
+                        </div>
+
+                        <div class="rule-item">
+                            <span>04</span>
+                            <p>
+                                The best available route depends on the network state.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- CTA -->
+            <section class="guide-cta">
+
+                <div>
+
+                    <div class="eyebrow">
+                        NEXT STEP
+                    </div>
+
+                    <h2>
+                        UNDERSTAND IT.
+                        <span>THEN BREAK IT.</span>
+                    </h2>
+
+                    <p>
+                        Explore the networking concepts before entering
+                        the actual simulation lab.
+                    </p>
+
+                </div>
+
+                <a
+                    href="learn.html"
+                    class="btn btn-primary"
+                >
+                    OPEN LEARN →
+                </a>
+
+            </section>
+
+        </main>
+
+
+        <footer class="site-footer">
+
+            <span>
+                NETROUTE · NETWORK LAB
+            </span>
+
+            <span>
+                LEARN · BREAK · REROUTE
+            </span>
+
+        </footer>
+
+    </div>
+
+
+    <script src="js/how-to-play.js"></script>
+
+</body>
+
+</html>
