@@ -88,6 +88,10 @@ document.addEventListener("DOMContentLoaded", () => {
         comparisonRequestSequence: 0,
         routeRequestPending: false,
         comparisonRequestPending: false,
+        packetWorkflowSequence: 0,
+        packetWorkflowPending: false,
+        resetRequestSequence: 0,
+        resetRequestPending: false,
         failureRequestSequence: 0,
         failureOperationPending: false,
         topology: null,
@@ -107,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
         delivered: 0,
         zoom: 1,
         packetAnimation: null,
+        packetAnimationSequence: 0,
         animationTimers: [],
         simulationNumber: 0
     };
@@ -297,65 +302,96 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function syncEvents() {
-        if (!state.simulationId) return;
-        const simId = state.simulationId;
-        const sessionSeq = state.sessionRequestSequence;
+    function isCurrentSession(simulationId, sessionSequence) {
+        return simulationId === state.simulationId && sessionSequence === state.sessionRequestSequence;
+    }
+
+    async function syncEvents(options = {}) {
+        const simulationId = options.simulationId || state.simulationId;
+        const sessionSequence = Number.isInteger(options.sessionSequence) ? options.sessionSequence : state.sessionRequestSequence;
+        if (!simulationId) return false;
         try {
-            const data = await window.NETROUTE_API.get(
-                "/simulations/" + encodeURIComponent(simId) + "/events"
-            );
-            if (
-                sessionSeq !== state.sessionRequestSequence ||
-                simId !== state.simulationId
-            ) return;
-            if (data && Array.isArray(data.events)) {
-                renderBackendEvents(data.events);
-            }
+            const data = await window.NETROUTE_API.get("/simulations/" + encodeURIComponent(simulationId) + "/events");
+            if (!isCurrentSession(simulationId, sessionSequence)) return false;
+            if (!data || !Array.isArray(data.events)) throw new Error("The backend returned an invalid event history response.");
+            renderBackendEvents(data.events);
+            return true;
         } catch (err) {
             console.warn("Could not sync simulation events:", err);
+            if (options.required) throw err;
+            return false;
         }
     }
 
-    async function syncMetrics() {
-        if (!state.simulationId) return;
-        const simId = state.simulationId;
-        const sessionSeq = state.sessionRequestSequence;
+    async function syncMetrics(options = {}) {
+        const simulationId = options.simulationId || state.simulationId;
+        const sessionSequence = Number.isInteger(options.sessionSequence) ? options.sessionSequence : state.sessionRequestSequence;
+        if (!simulationId) return false;
         try {
-            const metrics = await window.NETROUTE_API.get(
-                "/simulations/" + encodeURIComponent(simId) + "/metrics"
-            );
-            if (
-                sessionSeq !== state.sessionRequestSequence ||
-                simId !== state.simulationId
-            ) return;
-            if (metrics && typeof metrics === "object") {
-                state.metrics = metrics;
-                updateMetrics();
-            }
+            const metrics = await window.NETROUTE_API.get("/simulations/" + encodeURIComponent(simulationId) + "/metrics");
+            if (!isCurrentSession(simulationId, sessionSequence)) return false;
+            if (!metrics || typeof metrics !== "object") throw new Error("The backend returned invalid simulation metrics.");
+            state.metrics = metrics;
+            updateMetrics();
+            return true;
         } catch (err) {
             console.warn("Could not sync simulation metrics:", err);
+            if (options.required) throw err;
+            return false;
         }
     }
 
-    async function syncPackets() {
-        if (!state.simulationId) return;
-        const simId = state.simulationId;
-        const sessionSeq = state.sessionRequestSequence;
+    async function syncPackets(options = {}) {
+        const simulationId = options.simulationId || state.simulationId;
+        const sessionSequence = Number.isInteger(options.sessionSequence) ? options.sessionSequence : state.sessionRequestSequence;
+        if (!simulationId) return false;
         try {
             const [history, pending] = await Promise.all([
-                window.NETROUTE_API.get("/simulations/" + encodeURIComponent(simId) + "/packets"),
-                window.NETROUTE_API.get("/simulations/" + encodeURIComponent(simId) + "/packets/pending")
+                window.NETROUTE_API.get("/simulations/" + encodeURIComponent(simulationId) + "/packets"),
+                window.NETROUTE_API.get("/simulations/" + encodeURIComponent(simulationId) + "/packets/pending")
             ]);
-            if (
-                sessionSeq !== state.sessionRequestSequence ||
-                simId !== state.simulationId
-            ) return;
-            state.packetHistory = history && Array.isArray(history.packets) ? history.packets : [];
-            state.pendingPackets = pending && Array.isArray(pending.pendingPackets) ? pending.pendingPackets : [];
+            if (!isCurrentSession(simulationId, sessionSequence)) return false;
+            if (!history || !Array.isArray(history.packets) || !pending || !Array.isArray(pending.pendingPackets)) {
+                throw new Error("The backend returned invalid packet history or pending packet data.");
+            }
+            state.packetHistory = history.packets;
+            state.pendingPackets = pending.pendingPackets;
+            return true;
         } catch (err) {
             console.warn("Could not sync packets:", err);
+            if (options.required) throw err;
+            return false;
         }
+    }
+
+    async function fetchSessionSnapshot(simulationId, sessionSequence) {
+        const id = encodeURIComponent(simulationId);
+        const [session, metrics, events, history, pending] = await Promise.all([
+            window.NETROUTE_API.get("/simulations/" + id),
+            window.NETROUTE_API.get("/simulations/" + id + "/metrics"),
+            window.NETROUTE_API.get("/simulations/" + id + "/events"),
+            window.NETROUTE_API.get("/simulations/" + id + "/packets"),
+            window.NETROUTE_API.get("/simulations/" + id + "/packets/pending")
+        ]);
+        if (!isCurrentSession(simulationId, sessionSequence)) return null;
+        if (!session || session.id !== simulationId || !session.topology ||
+            !Array.isArray(session.topology.routers) || !Array.isArray(session.topology.links) ||
+            !metrics || typeof metrics !== "object" || !events || !Array.isArray(events.events) ||
+            !history || !Array.isArray(history.packets) || !pending || !Array.isArray(pending.pendingPackets)) {
+            throw new Error("The backend returned an incomplete simulation snapshot.");
+        }
+        return { session, metrics, events, history, pending };
+    }
+
+    function applySessionSnapshot(snapshot) {
+        state.eventTimestamps = [];
+        state.packetHistory = snapshot.history.packets;
+        state.pendingPackets = snapshot.pending.pendingPackets;
+        state.metrics = snapshot.metrics;
+        applyTopology(snapshot.session.topology, snapshot.metrics);
+        renderBackendEvents(snapshot.events.events);
+        updateMetrics();
+        setBackendStatus("Backend Connected");
     }
 
     function setSummary(title, message, type = "info") {
@@ -507,6 +543,10 @@ document.addEventListener("DOMContentLoaded", () => {
         cancelPacketAnimation();
 
         state.simulationId = null;
+        state.packetWorkflowSequence++;
+        state.packetWorkflowPending = false;
+        state.resetRequestSequence++;
+        state.resetRequestPending = false;
         invalidateFailureOperation();
         state.topology = null;
         state.metrics = null;
@@ -540,6 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
         clearEventLog();
         renderAll();
         updateMetrics();
+        syncFailureButtonState();
     }
 
     function applyTopology(topology, metrics) {
@@ -1064,10 +1105,7 @@ document.addEventListener("DOMContentLoaded", () => {
         state.comparisonRequestSequence++;
         state.routeRequestPending = false;
         state.comparisonRequestPending = false;
-
-        if (elements.simulateBtn) elements.simulateBtn.disabled = false;
-        if (elements.compareBtn) elements.compareBtn.disabled = false;
-
+        syncFailureButtonState();
         cancelPacketAnimation();
     }
 
@@ -1185,10 +1223,56 @@ document.addEventListener("DOMContentLoaded", () => {
             algorithm === elements.algorithmSelect.value;
     }
 
+    function normalizePacketOutcomes(processedPackets) {
+        const historyById = new Map(state.packetHistory.map((packet) => [Number(packet.id), packet]));
+        const seen = new Set();
+        return processedPackets.map((packet) => {
+            if (!packet || !Number.isInteger(packet.id) || seen.has(packet.id)) {
+                throw new Error("The backend returned an invalid or duplicate packet result.");
+            }
+            seen.add(packet.id);
+            const history = historyById.get(packet.id);
+            if (!history || history.status !== packet.status || history.delivered !== packet.delivered) {
+                throw new Error("Packet #" + packet.id + " does not match refreshed backend history.");
+            }
+            if (packet.status === "lost" && packet.delivered === false) {
+                return { id: packet.id, delivered: false, status: "lost",
+                    error: typeof packet.error === "string" ? packet.error : "The backend marked this packet lost." };
+            }
+            if (packet.status !== "delivered" || packet.delivered !== true) {
+                throw new Error("Packet #" + packet.id + " has an unsupported backend status.");
+            }
+
+            const source = state.routers.find((router) => router.backendId === Number(packet.source));
+            const destination = state.routers.find((router) => router.backendId === Number(packet.destination));
+            if (!source || !destination) throw new Error("Packet #" + packet.id + " refers to an unknown router.");
+            const route = mapBackendRoute(packet.route, source, destination);
+            for (const routerId of route) {
+                const router = getRouter(routerId);
+                if (!router || !router.active || state.failedRouters.has(routerId)) {
+                    throw new Error("Packet #" + packet.id + " route contains an unavailable router.");
+                }
+            }
+            for (let i = 1; i < route.length; i++) {
+                const link = getLink(route[i - 1], route[i]);
+                if (!link || !isLinkAvailable(link)) {
+                    throw new Error("Packet #" + packet.id + " route contains an unavailable link.");
+                }
+            }
+            const cost = Number.isFinite(packet.cost) ? packet.cost : null;
+            return {
+                id: packet.id, delivered: true, status: "delivered", route, cost,
+                summary: describePath(route) + " · " + (route.length - 1) + " hop(s)" +
+                    (cost === null ? "" : " · Cost " + cost) + " · " +
+                    (packet.algorithm || "Backend route") + " · Packet #" + packet.id + " delivered"
+            };
+        });
+    }
+
     async function simulateRoute() {
-        if (state.routeRequestPending) return;
-        if (state.failureOperationPending) {
-            setSummary("Network update in progress", "Wait for the backend failure or repair request to finish.", "error");
+        if (state.routeRequestPending || state.packetWorkflowPending) return;
+        if (state.failureOperationPending || state.resetRequestPending) {
+            setSummary("Network update in progress", "Wait for failure, repair, or reset to finish.", "error");
             return;
         }
 
@@ -1201,272 +1285,204 @@ document.addEventListener("DOMContentLoaded", () => {
         const sourceRouter = state.routers.find((router) => router.id === source);
         const destinationRouter = state.routers.find((router) => router.id === destination);
 
-        if (!simulationId) {
+        if (!simulationId || !sourceRouter || !destinationRouter || !algorithm ||
+            sourceRouter.backendId === destinationRouter.backendId) {
             clearRouteHighlights();
-            setSummary("Backend unavailable",
-                "Wait for a backend simulation session before calculating a route.", "error");
-            logEvent("Simulation stopped: Backend unavailable.", "error");
-            return;
-        }
-        if (!sourceRouter || !destinationRouter) {
-            clearRouteHighlights();
-            setSummary("Invalid router selection",
-                "Select a valid source and destination from the current topology.", "error");
-            logEvent("Simulation stopped: Invalid source or destination selection.", "error");
-            return;
-        }
-        if (sourceRouter.backendId === destinationRouter.backendId) {
-            clearRouteHighlights();
-            setSummary("Choose different routers",
-                "The source and destination must be different.", "error");
-            logEvent("Simulation stopped: source and destination are identical.", "warning");
-            return;
-        }
-        if (!algorithm) {
-            clearRouteHighlights();
-            setSummary("Invalid algorithm", "Select a supported routing algorithm.", "error");
-            logEvent("Simulation stopped: Invalid algorithm selected.", "error");
+            setSummary("Invalid simulation selection", "Select an active session, different routers, and a supported algorithm.", "error");
             return;
         }
 
         const requestSequence = ++state.routeRequestSequence;
+        const workflowSequence = ++state.packetWorkflowSequence;
         const priorityKey = elements.prioritySelect ? elements.prioritySelect.value : "normal";
-        const priorityInt = PRIORITY_MAP[priorityKey] || 1;
+        const priority = PRIORITY_MAP[priorityKey] || 1;
+        let createdPacket = null;
         state.routeRequestPending = true;
-        elements.simulateBtn.disabled = true;
+        state.packetWorkflowPending = true;
+        syncFailureButtonState();
         cancelPacketAnimation();
         clearRouteHighlights();
-        setSummary(
-            "Simulating packet route",
-            "Creating and processing packet from " + source + " to " + destination + " via " + algorithm + " (" + priorityKey + " priority)."
-        );
+        setSummary("Simulating packet route", "Creating and processing packet from " + source + " to " + destination + " via " + algorithm + ".");
 
         try {
-            // 1. Authoritative packet creation on backend
-            const packetResponse = await window.NETROUTE_API.post(
+            const created = await window.NETROUTE_API.post(
                 "/simulations/" + encodeURIComponent(simulationId) + "/packets",
-                {
-                    source: sourceRouter.backendId,
-                    destination: destinationRouter.backendId,
-                    priority: priorityInt,
-                    count: 1
-                }
+                { source: sourceRouter.backendId, destination: destinationRouter.backendId, priority, count: 1 }
             );
+            if (!created || !Array.isArray(created.packets) || created.packets.length !== 1 ||
+                !Number.isInteger(created.packets[0].id)) {
+                throw new Error("The backend did not return the created packet record.");
+            }
+            createdPacket = created.packets[0];
 
-            if (!isCurrentRouteRequest(
-                requestSequence, sessionSequence, simulationId, source, destination, selectedAlgorithm
-            )) return;
-
-            if (!packetResponse || !Array.isArray(packetResponse.packets) || packetResponse.packets.length === 0) {
-                throw new Error("The backend did not create the packet.");
+            // Keep packet creation and processing paired even when the selection changes.
+            // Results for an old session are processed there but never painted in a new session.
+            if (isCurrentSession(simulationId, sessionSequence)) {
+                await syncPackets({ simulationId, sessionSequence });
             }
 
-            const createdPacket = packetResponse.packets[0];
-
-            // 2. Authoritative packet processing on backend
-            const processResponse = await window.NETROUTE_API.post(
-                "/simulations/" + encodeURIComponent(simulationId) + "/packets/process",
-                {
-                    algorithm: algorithm
+            const processed = [];
+            let passes = 0;
+            do {
+                if (++passes > 100) throw new Error("The backend still has pending packets after 100 processing passes.");
+                const result = await window.NETROUTE_API.post(
+                    "/simulations/" + encodeURIComponent(simulationId) + "/packets/process",
+                    { algorithm }
+                );
+                if (!result || !Array.isArray(result.packets)) {
+                    throw new Error("The backend returned an invalid packet processing response.");
                 }
-            );
+                processed.push(...result.packets);
+                if (!isCurrentSession(simulationId, sessionSequence)) return;
+                const refreshed = await syncPackets({ simulationId, sessionSequence, required: true });
+                if (!refreshed) return;
+            } while (state.pendingPackets.length > 0);
 
-            if (!isCurrentRouteRequest(
-                requestSequence, sessionSequence, simulationId, source, destination, selectedAlgorithm
-            )) return;
+            if (!isCurrentSession(simulationId, sessionSequence)) return;
+            const refreshed = await Promise.all([
+                syncPackets({ simulationId, sessionSequence, required: true }),
+                syncMetrics({ simulationId, sessionSequence, required: true }),
+                syncEvents({ simulationId, sessionSequence, required: true })
+            ]);
+            if (refreshed.some((ok) => !ok)) return;
+            if (!isCurrentRouteRequest(requestSequence, sessionSequence, simulationId, source, destination, selectedAlgorithm)) return;
+            if (processed.length === 0) throw new Error("The backend returned no processed packet results.");
 
-            if (!processResponse || !Array.isArray(processResponse.packets)) {
-                throw new Error("The backend returned an invalid packet processing response.");
+            const outcomes = normalizePacketOutcomes(processed);
+            if (!outcomes.some((packet) => packet.id === createdPacket.id)) {
+                throw new Error("The newly created packet was not included in the processing results.");
             }
+            const delivered = outcomes.filter((packet) => packet.delivered);
+            const lost = outcomes.filter((packet) => !packet.delivered);
+            const summary = "Processed " + outcomes.length + " packet" + (outcomes.length === 1 ? "" : "s") +
+                ": " + delivered.length + " delivered, " + lost.length + " lost.";
 
-            // Sync authoritative backend metrics, events, and packet history
-            if (processResponse.metrics) {
-                state.metrics = processResponse.metrics;
-                updateMetrics();
-            }
-            await syncEvents();
-            await syncPackets();
+            delivered.forEach((packet) => logEvent(
+                "Packet #" + packet.id + " delivered via " + describePath(packet.route) +
+                    (packet.cost === null ? "." : " (cost " + packet.cost + ")."), "success"));
+            lost.forEach((packet) => logEvent("Packet #" + packet.id + " lost: " + packet.error, "error"));
+            state.simulationNumber += outcomes.length;
 
-            // Locate the processed packet corresponding to our creation
-            const processedPacket = processResponse.packets.find((p) => p.id === createdPacket.id) ||
-                processResponse.packets[processResponse.packets.length - 1];
-
-            if (!processedPacket) {
-                throw new Error("The backend processing response omitted packet #" + createdPacket.id + ".");
-            }
-
-            // Handle packet loss (e.g. unreachable destination or broken path)
-            if (processedPacket.status === "lost" || !processedPacket.delivered) {
+            if (delivered.length) {
+                state.route = delivered[0].route;
+                state.lastRouteResult = delivered[delivered.length - 1];
+                renderLinks();
+                renderRouters();
+                renderRouterDetails(state.selectedRouter);
+            } else {
                 clearRouteHighlights();
-                const errDetail = processedPacket.error ? ` (${processedPacket.error})` : "";
-                const unreachableMsg = "No route exists between " + source + " and " + destination +
-                    ". Destination unreachable; packet #" + processedPacket.id + " marked lost" + errDetail + ".";
-                setSummary("Route unreachable", unreachableMsg, "error");
-                logEvent(unreachableMsg, "error");
-                return;
             }
 
-            // Handle successful packet delivery
-            if (!Array.isArray(processedPacket.route) || processedPacket.route.length < 2) {
-                throw new Error("The backend confirmed delivery but returned an empty route.");
+            if (delivered.length === 0) {
+                setSummary("Packets lost", summary + " " + lost.map((p) => "#" + p.id + ": " + p.error).join(" "), "error");
+            } else if (lost.length || outcomes.length > 1) {
+                setSummary("Packet processing complete", summary, lost.length ? "error" : "success");
+            } else {
+                setSummary("Packet delivered", delivered[0].summary, "success");
             }
-
-            const mappedRoute = mapBackendRoute(
-                processedPacket.route, sourceRouter, destinationRouter
-            );
-            const hops = mappedRoute.length - 1;
-            const cost = Number.isFinite(processedPacket.cost) ? processedPacket.cost : 0;
-
-            state.route = mappedRoute;
-            state.lastRouteResult = {
-                route: mappedRoute,
-                hops: hops,
-                cost: cost,
-                algorithm: algorithm,
-                priority: priorityKey,
-                packetId: processedPacket.id,
-                summary: describePath(mappedRoute) +
-                    " · " + hops + " hop(s)" +
-                    " · Cost " + cost +
-                    " · " + algorithm +
-                    " · Reachable" +
-                    " · " + priorityKey + " priority" +
-                    " · Packet #" + processedPacket.id + " delivered"
-            };
-
-            renderLinks();
-            renderRouters();
-            renderRouterDetails(state.selectedRouter);
-            setSummary("Packet delivered", state.lastRouteResult.summary, "success");
-            logEvent(
-                "Packet #" + processedPacket.id + " delivered via " + describePath(mappedRoute) +
-                    " (cost " + cost + ", " + hops + " hops, " + algorithm + ").",
-                "success"
-            );
-
-            state.simulationNumber++;
-            animatePackets(mappedRoute);
+            animatePackets(delivered, requestSequence, sessionSequence, {
+                title: delivered.length > 1 ? "Packets processed" : "Packet delivered",
+                message: summary,
+                type: lost.length ? "error" : "success"
+            });
         } catch (error) {
-            if (!isCurrentRouteRequest(
-                requestSequence, sessionSequence, simulationId, source, destination, selectedAlgorithm
-            )) return;
-
-            clearRouteHighlights();
-            const rawMsg = error && (error.backendError || error.message)
-                ? String(error.backendError || error.message)
-                : "";
-            const isUnreachable = /unreachable|no route/i.test(rawMsg);
-            const isConnectionError = /connect|network|fetch/i.test(rawMsg);
-
-            let title = "Simulation failed";
-            let displayMsg = rawMsg || "The packet simulation request failed.";
-
-            if (isUnreachable) {
-                title = "Route unreachable";
-                displayMsg = "No route exists between " + source + " and " + destination + ". The destination is unreachable.";
-            } else if (isConnectionError) {
-                title = "Backend connection failed";
-                displayMsg = rawMsg;
+            if (isCurrentSession(simulationId, sessionSequence)) {
+                await Promise.all([
+                    syncPackets({ simulationId, sessionSequence }),
+                    syncMetrics({ simulationId, sessionSequence }),
+                    syncEvents({ simulationId, sessionSequence })
+                ]);
             }
-
-            setSummary(title, displayMsg, "error");
-            logEvent(displayMsg, "error");
-            syncMetrics();
-            syncEvents();
+            if (!isCurrentRouteRequest(requestSequence, sessionSequence, simulationId, source, destination, selectedAlgorithm)) return;
+            clearRouteHighlights();
+            const message = String(error && (error.backendError || error.message) || "The packet simulation request failed.");
+            const unreachable = /unreachable|no route/i.test(message);
+            setSummary(unreachable ? "Route unreachable" : "Simulation failed",
+                unreachable ? "The backend could not deliver the packet because no route is available. " + message : message,
+                "error");
+            logEvent(message, "error");
         } finally {
-            if (
-                requestSequence === state.routeRequestSequence &&
-                sessionSequence === state.sessionRequestSequence &&
-                simulationId === state.simulationId
-            ) {
-                state.routeRequestPending = false;
-                elements.simulateBtn.disabled = false;
+            if (workflowSequence === state.packetWorkflowSequence) {
+                state.packetWorkflowPending = false;
+                if (requestSequence === state.routeRequestSequence &&
+                    sessionSequence === state.sessionRequestSequence && simulationId === state.simulationId) {
+                    state.routeRequestPending = false;
+                }
+                syncFailureButtonState();
             }
         }
     }
 
-    function animatePackets(path) {
-        const points = path.map((id) => getRouter(id)).filter(Boolean);
-
-        if (points.length < 2) {
+    function animatePackets(packetResults, requestSequence, sessionSequence, completion) {
+        if (!Array.isArray(packetResults) || packetResults.length === 0) {
+            elements.packetsLayer.replaceChildren();
             return;
         }
+        const animationSequence = ++state.packetAnimationSequence;
+        const initial = getRouter(packetResults[0].route[0]);
+        if (!initial) return;
+        const dot = svgElement("circle", { cx: initial.x, cy: initial.y, r: 6, class: "packet-dot" });
+        elements.packetsLayer.replaceChildren(dot);
+        let packetIndex = 0;
+        let hopIndex = 0;
 
-        const requestSequence = state.routeRequestSequence;
-        const sessionSequence = state.sessionRequestSequence;
-        const packet = svgElement("circle", {
-            cx: points[0].x,
-            cy: points[0].y,
-            r: 6,
-            class: "packet-dot"
-        });
-
-        elements.packetsLayer.replaceChildren(packet);
-
-        const duration = elements.prioritySelect &&
-            elements.prioritySelect.value === "critical"
-            ? 260
-            : elements.prioritySelect && elements.prioritySelect.value === "high"
-                ? 380
-                : 520;
-        let index = 0;
-
-        function moveNext() {
-            if (
-                requestSequence !== state.routeRequestSequence ||
-                sessionSequence !== state.sessionRequestSequence
-            ) return;
-
-            if (index >= points.length - 1) {
+        function current() {
+            return animationSequence === state.packetAnimationSequence &&
+                requestSequence === state.routeRequestSequence &&
+                sessionSequence === state.sessionRequestSequence;
+        }
+        function nextPacket() {
+            if (!current()) return;
+            if (packetIndex >= packetResults.length) {
                 elements.packetsLayer.replaceChildren();
-
-                if (state.lastRouteResult) {
-                    setSummary(
-                        "Packet delivered",
-                        state.lastRouteResult.summary,
-                        "success"
-                    );
-                }
-
-                logEvent(
-                    "Packet #" + (state.lastRouteResult && state.lastRouteResult.packetId ? state.lastRouteResult.packetId : "") +
-                        " delivery completed at " + path[path.length - 1] + ".",
-                    "success"
-                );
+                setSummary(completion.title, completion.message, completion.type);
                 renderRouterDetails(state.selectedRouter);
                 return;
             }
-
-            const from = points[index];
-            const to = points[index + 1];
-            const started = performance.now();
-
-            function frame(now) {
-                if (
-                    !packet.isConnected ||
-                    requestSequence !== state.routeRequestSequence ||
-                    sessionSequence !== state.sessionRequestSequence
-                ) return;
-
-                const progress = Math.min((now - started) / duration, 1);
-                packet.setAttribute("cx", from.x + (to.x - from.x) * progress);
-                packet.setAttribute("cy", from.y + (to.y - from.y) * progress);
-
-                if (progress < 1) {
-                    state.packetAnimation = requestAnimationFrame(frame);
-                } else {
-                    index++;
-                    moveNext();
-                }
+            const result = packetResults[packetIndex];
+            const points = result.route.map(getRouter);
+            if (points.some((point) => !point)) {
+                cancelPacketAnimation();
+                setSummary("Packet animation stopped", "A router in the confirmed route is unavailable in this session.", "error");
+                return;
             }
-
+            state.route = result.route;
+            state.lastRouteResult = result;
+            renderLinks();
+            renderRouters();
+            renderRouterDetails(state.selectedRouter);
+            dot.setAttribute("cx", points[0].x);
+            dot.setAttribute("cy", points[0].y);
+            hopIndex = 0;
+            nextHop(points);
+        }
+        function nextHop(points) {
+            if (!current()) return;
+            if (hopIndex >= points.length - 1) {
+                packetIndex++;
+                nextPacket();
+                return;
+            }
+            const from = points[hopIndex];
+            const to = points[hopIndex + 1];
+            const start = performance.now();
+            const priority = elements.prioritySelect && elements.prioritySelect.value;
+            const duration = priority === "critical" ? 260 : priority === "high" ? 380 : 520;
+            function frame(now) {
+                if (!dot.isConnected || !current()) return;
+                const progress = Math.min((now - start) / duration, 1);
+                dot.setAttribute("cx", from.x + (to.x - from.x) * progress);
+                dot.setAttribute("cy", from.y + (to.y - from.y) * progress);
+                if (progress < 1) state.packetAnimation = requestAnimationFrame(frame);
+                else { hopIndex++; nextHop(points); }
+            }
             state.packetAnimation = requestAnimationFrame(frame);
         }
-
-        moveNext();
+        nextPacket();
     }
 
     function cancelPacketAnimation() {
+        state.packetAnimationSequence++;
         if (state.packetAnimation !== null) {
             cancelAnimationFrame(state.packetAnimation);
             state.packetAnimation = null;
@@ -1481,21 +1497,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function syncFailureButtonState() {
-        const disabled = state.failureOperationPending || !state.simulationId;
-        [
-            elements.failRouterBtn,
-            elements.repairRouterBtn,
-            elements.breakLinkBtn,
-            elements.restoreLinkBtn
-        ].forEach((button) => {
-            if (button) button.disabled = disabled;
-        });
-
+        const noSession = !state.simulationId;
+        const networkBusy = state.failureOperationPending || state.resetRequestPending ||
+            state.packetWorkflowPending || state.routeRequestPending || state.comparisonRequestPending;
+        [elements.failRouterBtn, elements.repairRouterBtn, elements.breakLinkBtn, elements.restoreLinkBtn]
+            .forEach((button) => { if (button) button.disabled = noSession || networkBusy; });
         if (elements.simulateBtn) {
-            elements.simulateBtn.disabled = disabled || state.routeRequestPending;
+            elements.simulateBtn.disabled = noSession || state.failureOperationPending ||
+                state.resetRequestPending || state.packetWorkflowPending || state.routeRequestPending;
         }
         if (elements.compareBtn) {
-            elements.compareBtn.disabled = disabled || state.comparisonRequestPending;
+            elements.compareBtn.disabled = noSession || state.failureOperationPending ||
+                state.resetRequestPending || state.packetWorkflowPending || state.comparisonRequestPending;
+        }
+        if (elements.resetBtn) {
+            elements.resetBtn.disabled = noSession || state.failureOperationPending ||
+                state.resetRequestPending || state.packetWorkflowPending || state.routeRequestPending;
         }
     }
 
@@ -1585,7 +1602,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function runFailureAction(action, selectedValue) {
         if (state.failureOperationPending) return;
-        if (state.routeRequestPending || state.comparisonRequestPending) {
+        if (state.routeRequestPending || state.packetWorkflowPending || state.comparisonRequestPending || state.resetRequestPending) {
             setSummary(
                 "Request in progress",
                 "Wait for the current route or comparison request to finish before changing the network.",
@@ -1757,6 +1774,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function compareAlgorithms() {
         if (state.comparisonRequestPending) return;
+        if (state.packetWorkflowPending || state.resetRequestPending) {
+            setSummary("Network update in progress", "Wait for packet processing or reset to finish before comparing.", "error");
+            return;
+        }
         if (state.failureOperationPending) {
             setSummary("Network update in progress", "Wait for the backend failure or repair request to finish.", "error");
             return;
@@ -1904,73 +1925,76 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function isCurrentReset(requestSequence, sessionSequence, simulationId) {
+        return requestSequence === state.resetRequestSequence &&
+            sessionSequence === state.sessionRequestSequence && simulationId === state.simulationId;
+    }
+
     async function resetNetwork() {
-        if (state.failureOperationPending) {
-            setSummary("Network update in progress", "Wait for the backend failure or repair request to finish before resetting.", "error");
+        if (state.resetRequestPending) return;
+        if (state.routeRequestPending || state.packetWorkflowPending || state.failureOperationPending) {
+            setSummary("Request in progress", "Wait for packet processing or network failure/repair to finish before resetting.", "error");
             return;
         }
+        const simulationId = state.simulationId;
+        const sessionSequence = state.sessionRequestSequence;
+        if (!simulationId) {
+            setSummary("Backend unavailable", "Create a backend simulation session before resetting.", "error");
+            return;
+        }
+
+        const requestSequence = ++state.resetRequestSequence;
+        state.resetRequestPending = true;
         invalidateAlgorithmRequests();
         cancelPacketAnimation();
+        clearRouteHighlights();
+        if (elements.comparisonPanel) elements.comparisonPanel.classList.add("hidden");
+        if (elements.networkViewport) elements.networkViewport.style.transform = "scale(1)";
+        if (elements.zoomResetBtn) elements.zoomResetBtn.textContent = "100%";
+        syncFailureButtonState();
+        setSummary("Resetting network", "Waiting for backend confirmation for this simulation.");
 
-        state.failedRouters = new Set(
-            state.routers.filter((router) => !router.active).map((router) => router.id)
-        );
-        state.brokenLinks = new Set(
-            state.links.filter((link) => !link.active).map((link) => linkKey(link.a, link.b))
-        );
-        state.route = [];
-        state.lastRouteResult = null;
-        state.selectedRouter = null;
-        state.source = state.routers[0] ? state.routers[0].id : "";
-        state.destination = state.routers.length
-            ? state.routers[state.routers.length - 1].id
-            : "";
-        state.zoom = 1;
-
-        if (elements.comparisonPanel) {
-            elements.comparisonPanel.classList.add("hidden");
-        }
-
-        if (elements.networkViewport) {
-            elements.networkViewport.style.transform = "scale(1)";
-        }
-
-        if (elements.zoomResetBtn) {
-            elements.zoomResetBtn.textContent = "100%";
-        }
-
-        if (state.simulationId) {
-            try {
-                const response = await window.NETROUTE_API.post(
-                    "/simulations/" + encodeURIComponent(state.simulationId) + "/reset",
-                    {}
-                );
-                if (response && response.metrics) {
-                    state.metrics = response.metrics;
-                }
-            } catch (err) {
-                console.warn("Could not reset backend simulation:", err);
+        try {
+            const response = await window.NETROUTE_API.post(
+                "/simulations/" + encodeURIComponent(simulationId) + "/reset", {}
+            );
+            if (!isCurrentReset(requestSequence, sessionSequence, simulationId)) return;
+            if (!response || response.id !== simulationId || response.reset !== true) {
+                throw new Error("The backend did not confirm that this simulation was reset.");
             }
-        } else {
-            state.metrics = null;
+            const snapshot = await fetchSessionSnapshot(simulationId, sessionSequence);
+            if (!isCurrentReset(requestSequence, sessionSequence, simulationId)) return;
+            if (!snapshot) return;
+            applySessionSnapshot(snapshot);
+            setSummary("Network ready", "Backend topology, metrics, packets, and events are synchronized after reset.", "success");
+        } catch (error) {
+            if (!isCurrentReset(requestSequence, sessionSequence, simulationId)) return;
+            let refreshed = false;
+            try {
+                const snapshot = await fetchSessionSnapshot(simulationId, sessionSequence);
+                if (!isCurrentReset(requestSequence, sessionSequence, simulationId)) return;
+                if (snapshot) {
+                    applySessionSnapshot(snapshot);
+                    refreshed = true;
+                }
+            } catch (refreshError) {
+                console.warn("Could not reload backend state after reset failure:", refreshError);
+            }
+            setBackendStatus(refreshed ? "Backend Connected" : "Backend Unavailable");
+            setSummary(
+                "Reset failed",
+                (error && error.message ? error.message : "The backend reset request failed.") +
+                    (refreshed
+                        ? " Current backend state was reloaded; reset success was not confirmed."
+                        : " The last confirmed topology remains displayed because current backend state could not be loaded."),
+                "error"
+            );
+        } finally {
+            if (isCurrentReset(requestSequence, sessionSequence, simulationId)) {
+                state.resetRequestPending = false;
+                syncFailureButtonState();
+            }
         }
-
-        state.packetHistory = [];
-        state.pendingPackets = [];
-        state.eventTimestamps = [];
-        clearEventLog();
-        renderAll();
-        updateMetrics();
-        await syncEvents();
-        await syncPackets();
-
-        setSummary(
-            state.simulationId ? "Network ready" : "Backend unavailable",
-            state.simulationId
-                ? "The network and packet queues have been reset."
-                : "Create a backend session before using the Lab.",
-            state.simulationId ? "info" : "error"
-        );
     }
 
     function setZoom(nextZoom) {
