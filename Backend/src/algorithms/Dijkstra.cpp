@@ -1,35 +1,53 @@
+
 #include "algorithms/Dijkstra.hpp"
-#include <algorithm>
+
+#include <functional>
 #include <limits>
 #include <map>
 #include <queue>
-#include <set>
-#include <stack>
+#include <utility>
 #include <vector>
 
 using namespace std;
+
 string DijkstraStrategy::getName() const
 {
     return "Dijkstra";
 }
 
-vector<int> DijkstraStrategy::findRoute(const Network &network, int source, int destination)
+vector<int> DijkstraStrategy::findRoute(
+    const Network& network,
+    int source,
+    int destination
+)
 {
-
-    RoutingStrategy::validateEndpoints(network, source, destination);
+    RoutingStrategy::validateEndpoints(
+        network,
+        source,
+        destination
+    );
 
     const int INF = numeric_limits<int>::max();
 
     map<int, int> distance;
     map<int, int> parent;
 
-    for (const auto &router : network.getRouters())
-        distance.emplace(router.getId(), INF);
+    // Initialize all router distances.
+    for (const auto& router : network.getRouters())
+    {
+        distance[router.getId()] = INF;
+    }
 
     distance[source] = 0;
 
     using Node = pair<int, int>;
-    priority_queue<Node, vector<Node>, greater<Node>> pq;
+
+    // Min-priority queue: lowest cost is processed first.
+    priority_queue<
+        Node,
+        vector<Node>,
+        greater<Node>
+    > pq;
 
     pq.push({0, source});
 
@@ -38,32 +56,47 @@ vector<int> DijkstraStrategy::findRoute(const Network &network, int source, int 
         auto current = pq.top();
         pq.pop();
 
-        int cost = current.first;
-        int router = current.second;
+        int currentCost = current.first;
+        int currentRouter = current.second;
 
-        if (cost != distance[router])
+        // Ignore outdated queue entries.
+        if (currentCost != distance[currentRouter])
             continue;
 
-        if (router == destination)
+        if (currentRouter == destination)
             break;
 
-        for (auto edge : network.getNeighbors(router))
+        for (const auto& edge :
+             network.getNeighbors(currentRouter))
         {
-            int next = edge.first;
+            int nextRouter = edge.first;
             int weight = edge.second;
 
-            if (cost <= INF - weight && cost + weight < distance[next])
+            // Prevent integer overflow.
+            if (weight < 0)
+                throw runtime_error(
+                    "Dijkstra requires non-negative link costs."
+                );
+
+            if (currentCost <= INF - weight &&
+                currentCost + weight < distance[nextRouter])
             {
+                distance[nextRouter] = currentCost + weight;
+                parent[nextRouter] = currentRouter;
 
-                distance[next] = cost + weight;
-                parent[next] = router;
-
-                pq.push({distance[next], next});
+                pq.push({
+                    distance[nextRouter],
+                    nextRouter
+                });
             }
         }
     }
 
-    vector<int> path = RoutingStrategy::buildPath(source, destination, parent);
+    vector<int> path = RoutingStrategy::buildPath(
+        source,
+        destination,
+        parent
+    );
 
     if (path.empty())
         throw DestinationUnreachableException();

@@ -1,22 +1,29 @@
+
 #include "algorithms/DFS.hpp"
-#include <algorithm>
-#include <limits>
+
 #include <map>
-#include <queue>
 #include <set>
 #include <stack>
 #include <vector>
 
 using namespace std;
+
 string DFSStrategy::getName() const
 {
     return "DFS";
 }
 
-vector<int> DFSStrategy::findRoute(const Network &network, int source, int destination)
+vector<int> DFSStrategy::findRoute(
+    const Network& network,
+    int source,
+    int destination
+)
 {
-
-    RoutingStrategy::validateEndpoints(network, source, destination);
+    RoutingStrategy::validateEndpoints(
+        network,
+        source,
+        destination
+    );
 
     stack<int> st;
     set<int> visited;
@@ -35,7 +42,9 @@ vector<int> DFSStrategy::findRoute(const Network &network, int source, int desti
 
         auto neighbors = network.getNeighbors(current);
 
-        for (auto it = neighbors.rbegin(); it != neighbors.rend(); ++it)
+        // Reverse traversal preserves deterministic DFS order.
+        for (auto it = neighbors.rbegin();
+             it != neighbors.rend(); ++it)
         {
             int next = it->first;
 
@@ -48,7 +57,11 @@ vector<int> DFSStrategy::findRoute(const Network &network, int source, int desti
         }
     }
 
-    vector<int> path = RoutingStrategy::buildPath(source, destination, parent);
+    vector<int> path = RoutingStrategy::buildPath(
+        source,
+        destination,
+        parent
+    );
 
     if (path.empty())
         throw DestinationUnreachableException();

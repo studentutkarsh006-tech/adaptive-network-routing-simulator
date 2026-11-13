@@ -1,22 +1,29 @@
+
 #include "algorithms/BFS.hpp"
-#include <algorithm>
-#include <limits>
+
 #include <map>
 #include <queue>
 #include <set>
-#include <stack>
 #include <vector>
 
 using namespace std;
+
 string BFSStrategy::getName() const
 {
     return "BFS";
 }
 
-vector<int> BFSStrategy::findRoute(const Network &network, int source, int destination)
+vector<int> BFSStrategy::findRoute(
+    const Network& network,
+    int source,
+    int destination
+)
 {
-
-    RoutingStrategy::validateEndpoints(network, source, destination);
+    RoutingStrategy::validateEndpoints(
+        network,
+        source,
+        destination
+    );
 
     queue<int> q;
     set<int> visited;
@@ -33,7 +40,7 @@ vector<int> BFSStrategy::findRoute(const Network &network, int source, int desti
         if (current == destination)
             break;
 
-        for (auto edge : network.getNeighbors(current))
+        for (const auto& edge : network.getNeighbors(current))
         {
             int next = edge.first;
 
@@ -46,7 +53,11 @@ vector<int> BFSStrategy::findRoute(const Network &network, int source, int desti
         }
     }
 
-    vector<int> path = RoutingStrategy::buildPath(source, destination, parent);
+    vector<int> path = RoutingStrategy::buildPath(
+        source,
+        destination,
+        parent
+    );
 
     if (path.empty())
         throw DestinationUnreachableException();

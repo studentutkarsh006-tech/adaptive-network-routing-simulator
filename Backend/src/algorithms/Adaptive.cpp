@@ -1,81 +1,123 @@
+
 #include "algorithms/Adaptive.hpp"
 #include "algorithms/BFS.hpp"
 #include "algorithms/Dijkstra.hpp"
-#include <algorithm>
-#include <limits>
-#include <map>
-#include <queue>
-#include <set>
-#include <stack>
+
+#include <stdexcept>
 #include <vector>
 
 using namespace std;
+
 string AdaptiveStrategy::getName() const
 {
     return "Adaptive";
 }
 
-// This strategy only compares the existing BFS and Dijkstra candidates.
-// It scores each as total link cost + 0.25 per hop and picks the lower score
-// (BFS wins ties). It has no traffic, queue, latency, or congestion model.
-vector<int> AdaptiveStrategy::findRoute(const Network &network, int source, int destination)
+vector<int> AdaptiveStrategy::findRoute(
+    const Network& network,
+    int source,
+    int destination
+)
 {
-
+    // Generate candidate routes using BFS and Dijkstra.
     BFSStrategy bfs;
     DijkstraStrategy dijkstra;
 
     vector<int> bfsPath;
     vector<int> dijkstraPath;
 
+    // Candidate 1: Minimum-hop route.
     try
     {
-        bfsPath = bfs.findRoute(network, source, destination);
+        bfsPath = bfs.findRoute(
+            network,
+            source,
+            destination
+        );
     }
-    catch (const DestinationUnreachableException &)
+    catch (const DestinationUnreachableException&)
     {
-        // The other candidate may still be available for a future strategy.
+        // Continue and check the Dijkstra candidate.
     }
 
+    // Candidate 2: Minimum-cost route.
     try
     {
-        dijkstraPath = dijkstra.findRoute(network, source, destination);
+        dijkstraPath = dijkstra.findRoute(
+            network,
+            source,
+            destination
+        );
     }
-    catch (const DestinationUnreachableException &)
+    catch (const DestinationUnreachableException&)
     {
-        // Only expected unreachability is a candidate failure. Invalid router
-        // IDs and unexpected errors must remain visible to the caller.
+        // Continue with the available candidate, if any.
     }
 
+    // Neither algorithm could find a route.
     if (bfsPath.empty() && dijkstraPath.empty())
+    {
         throw DestinationUnreachableException();
+    }
 
+    // Only one candidate is available.
     if (bfsPath.empty())
         return dijkstraPath;
 
     if (dijkstraPath.empty())
         return bfsPath;
 
-    auto calculateCost = [&network](const vector<int> &path) {
-        int total = 0;
+    // Calculate the total cost of a candidate route.
+    auto calculateCost = [&network](const vector<int>& path)
+    {
+        int totalCost = 0;
 
-        for (size_t i = 1; i < path.size(); i++)
+        for (size_t i = 1; i < path.size(); ++i)
         {
-            for (auto edge : network.getNeighbors(path[i - 1]))
+            bool found = false;
+
+            for (const auto& edge :
+                 network.getNeighbors(path[i - 1]))
             {
                 if (edge.first == path[i])
                 {
-                    total += edge.second;
+                    totalCost += edge.second;
+                    found = true;
                     break;
                 }
             }
+
+            if (!found)
+            {
+                throw runtime_error(
+                    "Adaptive route contains an inactive link."
+                );
+            }
         }
 
-        return total;
+        return totalCost;
     };
 
-    double bfsScore = calculateCost(bfsPath) + 0.25 * (bfsPath.size() - 1);
+    // Calculate candidate route costs.
+    int bfsCost = calculateCost(bfsPath);
+    int dijkstraCost = calculateCost(dijkstraPath);
 
-    double dijkstraScore = calculateCost(dijkstraPath) + 0.25 * (dijkstraPath.size() - 1);
+    // Calculate number of hops.
+    int bfsHops = static_cast<int>(bfsPath.size()) - 1;
+    int dijkstraHops = static_cast<int>(dijkstraPath.size()) - 1;
 
-    return (bfsScore <= dijkstraScore) ? bfsPath : dijkstraPath;
+    // Adaptive scoring:
+    // Total link cost + 0.25 penalty per hop.
+    double bfsScore =
+        bfsCost + (0.25 * bfsHops);
+
+    double dijkstraScore =
+        dijkstraCost + (0.25 * dijkstraHops);
+
+    // Select the route with the lower score.
+    // BFS wins when both scores are equal.
+    if (bfsScore <= dijkstraScore)
+        return bfsPath;
+
+    return dijkstraPath;
 }

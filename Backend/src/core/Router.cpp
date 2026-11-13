@@ -1,3 +1,4 @@
+
 #include "Router.hpp"
 
 Router::Router() : id(0), name(""), active(true) {}
@@ -5,9 +6,17 @@ Router::Router() : id(0), name(""), active(true) {}
 Router::Router(int id, string name)
     : id(id), name(name), active(true) {}
 
-int Router::getId() const { return id; }
-string Router::getName() const { return name; }
-bool Router::isActive() const { return active; }
+int Router::getId() const {
+    return id;
+}
+
+string Router::getName() const {
+    return name;
+}
+
+bool Router::isActive() const {
+    return active;
+}
 
 void Router::setActive(bool status) {
     active = status;
@@ -18,11 +27,13 @@ void Router::addPacket(const Packet& packet) {
 }
 
 bool Router::removePacket(Packet& packet) {
-    if (packetQueue.empty())
+    if (packetQueue.empty()) {
         return false;
+    }
 
     packet = packetQueue.front();
     packetQueue.pop();
+
     return true;
 }
 
@@ -46,8 +57,9 @@ vector<Packet> Router::drainPackets() {
     vector<Packet> result;
     Packet packet;
 
-    while (removePacket(packet))
+    while (removePacket(packet)) {
         result.push_back(packet);
+    }
 
     return result;
 }

@@ -1565,3 +1565,32 @@ select:disabled {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* =========================================================
+   NETROUTE LAB — ROUTER-TO-ROUTER UPDATE
+   Remove PC endpoint visuals
+========================================================= */
+
+.endpoint-link,
+.computer-icon,
+.computer-screen,
+.computer-stand,
+.endpoint-label {
+    display: none !important;
+}
+
+/* Network canvas */
+.network-canvas {
+    min-height: 440px;
+}
+
+/* Preserve topology rendering */
+.network-svg {
+    min-height: 400px;
+}
+
+#linksLayer,
+#packetsLayer,
+#routersLayer {
+    visibility: visible;
+}

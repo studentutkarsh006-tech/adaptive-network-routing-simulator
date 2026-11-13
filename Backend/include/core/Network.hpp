@@ -1,3 +1,4 @@
+
 #ifndef NETWORK_HPP
 #define NETWORK_HPP
 
@@ -5,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <string>
+
 #include "Router.hpp"
 #include "Link.hpp"
 #include "Packet.hpp"
@@ -25,6 +27,7 @@ public:
 
     void initializeDefaultNetwork();
     void initializeTopology(int routerCount);
+
     const vector<Router>& getRouters() const;
     const vector<Link>& getLinks() const;
 
@@ -40,10 +43,12 @@ public:
     void repairLink(int source, int destination);
 
     vector<pair<int, int>> getNeighbors(int id) const;
+
     bool isRouterActive(int id) const;
     bool isConnected(int source, int destination) const;
 
     void queuePacket(int routerId, const Packet& packet);
+
     vector<Packet> getPendingPackets() const;
     vector<Packet> collectPendingPackets();
 
