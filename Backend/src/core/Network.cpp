@@ -11,83 +11,66 @@ Network::Network()
 {
     initializeDefaultNetwork();
 }
-
 void Network::initializeDefaultNetwork()
 {
     initializeTopology(8);
 }
 
-void Network::initializeTopology(int routerCount)
-{
-    if (routerCount < 4 || routerCount > 15)
-    {
+
+void Network::initializeTopology(int routerCount) {
+    if (routerCount < 4 || routerCount > 12) {
         throw invalid_argument(
-            "Router count must be between 4 and 15."
+            "Router count must be between 4 and 12."
         );
     }
 
     routers.clear();
     links.clear();
-    graph.clear();
 
-    // Create routers with sequential IDs.
-    for (int i = 1; i <= routerCount; ++i)
-    {
+    // Create routers.
+    for (int i = 1; i <= routerCount; i++) {
         routers.emplace_back(i, "R" + to_string(i));
     }
 
-    // Prevent duplicate undirected links.
-    set<pair<int, int>> addedLinks;
+    // Exact user-defined undirected topology.
+    const pair<int, int> topologyLinks[] = {
+        {1, 2},
+        {1, 4},
+        {2, 3},
+        {2, 5},
+        {3, 5},
+        {3, 6},
+        {3, 7},
+        {4, 5},
+        {4, 8},
+        {5, 6},
+        {6, 7},
+        {6, 9},
+        {6, 10},
+        {7, 10},
+        {8, 9},
+        {9, 11},
+        {10, 12},
+        {11, 12}
+    };
 
-    auto addLink = [&](int source, int destination)
-    {
-        if (source == destination)
-            return;
+    // Add only connections whose routers exist.
+    for (const auto& connection : topologyLinks) {
+        int source = connection.first;
+        int destination = connection.second;
+
+        if (source > routerCount || destination > routerCount) {
+            continue;
+        }
 
         int first = min(source, destination);
         int second = max(source, destination);
 
-        if (first < 1 || second > routerCount)
-            return;
+        int cost = 1 + (
+            (first * 7 + second * 3 + first * second) % 9
+        );
 
-        if (!addedLinks.insert({first, second}).second)
-            return;
-
-        // Deterministic link cost between 1 and 9.
-        int linkCost = 1 +
-            ((first * 7 + second * 3 + first * second) % 9);
-
-        links.emplace_back(first, second, linkCost);
-    };
-
-    /*
-        SPARSE HYBRID TOPOLOGY
-
-        Layer 1: Backbone
-        Connect consecutive routers to guarantee connectivity.
-
-        Layer 2: Selective alternate paths
-        Add only occasional skip-one links.
-
-        The backbone provides bottlenecks.
-        The selective links provide alternative routes.
-
-        No direct R1-to-Rn connection is created.
-        The topology is not a full mesh.
-    */
-
-    // Layer 1: Main backbone.
-    for (int i = 1; i < routerCount; ++i)
-    {
-        addLink(i, i + 1);
-    }
-
-    // Layer 2: Sparse alternate connections.
-    // Add one alternate link approximately every three routers.
-    // Keep the last router out of these cross-links.
-    for (int i = 1; i + 2 < routerCount; i += 3)
-    {
-        addLink(i, i + 2);
+        links.emplace_back(first, second, cost);
     }
 
     rebuildGraph();
@@ -107,13 +90,12 @@ void Network::rebuildGraph()
 {
     graph.clear();
 
-    // Create an adjacency list for every router.
     for (const auto& router : routers)
     {
         graph[router.getId()] = {};
     }
 
-    // Add only active links between active routers.
+    // Only active links between active routers are routable.
     for (const auto& link : links)
     {
         if (!link.isActive())
@@ -122,17 +104,32 @@ void Network::rebuildGraph()
         const Router* source = findRouter(link.getSource());
         const Router* destination = findRouter(link.getDestination());
 
-        if (source && destination &&
-            source->isActive() && destination->isActive())
-        {
-            graph[link.getSource()].push_back(
-                {link.getDestination(), link.getCost()}
-            );
+        if (!source || !destination)
+            continue;
 
-            graph[link.getDestination()].push_back(
-                {link.getSource(), link.getCost()}
-            );
-        }
+        if (!source->isActive() || !destination->isActive())
+            continue;
+
+        graph[link.getSource()].push_back(
+            {link.getDestination(), link.getCost()}
+        );
+
+        graph[link.getDestination()].push_back(
+            {link.getSource(), link.getCost()}
+        );
+    }
+
+    // Keep neighbor ordering deterministic.
+    for (auto& entry : graph)
+    {
+        sort(
+            entry.second.begin(),
+            entry.second.end(),
+            [](const auto& a, const auto& b)
+            {
+                return a.first < b.first;
+            }
+        );
     }
 }
 
@@ -174,7 +171,8 @@ void Network::displayNetwork() const
         cout << link.getSource() << " <-> "
              << link.getDestination()
              << " | Cost: " << link.getCost()
-             << " | " << (link.isActive() ? "Active" : "Failed")
+             << " | "
+             << (link.isActive() ? "Active" : "Failed")
              << '\n';
     }
 }
@@ -216,19 +214,22 @@ void Network::failLink(int source, int destination)
 
     for (auto& link : links)
     {
-        if ((link.getSource() == source &&
+        bool matches =
+            (link.getSource() == source &&
              link.getDestination() == destination) ||
             (link.getSource() == destination &&
-             link.getDestination() == source))
-        {
-            if (!link.isActive())
-                throw runtime_error("Link is already failed.");
+             link.getDestination() == source);
 
-            link.setActive(false);
+        if (!matches)
+            continue;
 
-            rebuildGraph();
-            return;
-        }
+        if (!link.isActive())
+            throw runtime_error("Link is already failed.");
+
+        link.setActive(false);
+
+        rebuildGraph();
+        return;
     }
 
     throw LinkNotFoundException();
@@ -241,19 +242,22 @@ void Network::repairLink(int source, int destination)
 
     for (auto& link : links)
     {
-        if ((link.getSource() == source &&
+        bool matches =
+            (link.getSource() == source &&
              link.getDestination() == destination) ||
             (link.getSource() == destination &&
-             link.getDestination() == source))
-        {
-            if (link.isActive())
-                throw runtime_error("Link is already active.");
+             link.getDestination() == source);
 
-            link.setActive(true);
+        if (!matches)
+            continue;
 
-            rebuildGraph();
-            return;
-        }
+        if (link.isActive())
+            throw runtime_error("Link is already active.");
+
+        link.setActive(true);
+
+        rebuildGraph();
+        return;
     }
 
     throw LinkNotFoundException();
@@ -281,26 +285,25 @@ bool Network::isConnected(int source, int destination) const
     if (!isRouterActive(source) || !isRouterActive(destination))
         return false;
 
-    queue<int> q;
+    queue<int> pending;
     set<int> visited;
 
-    q.push(source);
+    pending.push(source);
     visited.insert(source);
 
-    while (!q.empty())
+    while (!pending.empty())
     {
-        int current = q.front();
-        q.pop();
+        int current = pending.front();
+        pending.pop();
 
         if (current == destination)
             return true;
 
         for (const auto& neighbor : getNeighbors(current))
         {
-            if (!visited.count(neighbor.first))
+            if (visited.insert(neighbor.first).second)
             {
-                visited.insert(neighbor.first);
-                q.push(neighbor.first);
+                pending.push(neighbor.first);
             }
         }
     }
@@ -330,9 +333,7 @@ void Network::queuePacket(int routerId, const Packet& packet)
     }
 
     if (!findRouter(packet.getDestination()))
-    {
         throw RouterNotFoundException();
-    }
 
     router->addPacket(packet);
 }
@@ -345,10 +346,11 @@ vector<Packet> Network::getPendingPackets() const
     {
         auto packets = router.getQueuedPackets();
 
-        for (const auto& packet : packets)
-        {
-            result.push_back(packet);
-        }
+        result.insert(
+            result.end(),
+            packets.begin(),
+            packets.end()
+        );
     }
 
     return result;
@@ -358,16 +360,17 @@ vector<Packet> Network::collectPendingPackets()
 {
     vector<Packet> result;
 
-    // Drain every router, including failed routers.
-    // Packets already queued before a failure are preserved.
+    // Preserve queued packets even if their source router failed
+    // after the packets were originally queued.
     for (auto& router : routers)
     {
         auto packets = router.drainPackets();
 
-        for (const auto& packet : packets)
-        {
-            result.push_back(packet);
-        }
+        result.insert(
+            result.end(),
+            packets.begin(),
+            packets.end()
+        );
     }
 
     return result;
@@ -460,7 +463,7 @@ void Network::loadNetwork(istream& in)
 
         if (!(in >> a >> b >> linkCost >> active) ||
             a == b ||
-            linkCost <= 0 ||
+            linkCost < 1 ||
             linkCost > 9 ||
             (active != 0 && active != 1))
         {
@@ -490,9 +493,9 @@ void Network::loadNetwork(istream& in)
         newLinks.push_back(link);
     }
 
-    // Replace the current network only after successful parsing.
-    routers = newRouters;
-    links = newLinks;
+    // Commit only after the complete file has been validated.
+    routers = move(newRouters);
+    links = move(newLinks);
 
     rebuildGraph();
 }

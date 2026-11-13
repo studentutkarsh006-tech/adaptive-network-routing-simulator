@@ -958,8 +958,6 @@ select:disabled {
     color: var(--lab-red);
 }
 
-------------------------- */
-
 .comparison-panel {
     margin-top: 20px;
     padding: 16px;
@@ -1556,4 +1554,406 @@ select:disabled {
 #packetsLayer,
 #routersLayer {
     visibility: visible;
+}
+
+/* FUTURISTIC ROUTER DESIGN */
+
+.router-node {
+    cursor: pointer;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: filter 0.2s ease;
+}
+
+.router-node:hover {
+    filter: drop-shadow(0 0 13px rgba(0, 210, 255, 0.8));
+}
+
+.router-shell {
+    filter: drop-shadow(0 0 7px rgba(0, 190, 255, 0.5));
+}
+
+.router-node.failed .router-shell {
+    filter: drop-shadow(0 0 12px rgba(255, 35, 75, 0.9));
+}
+
+.router-halo {
+    pointer-events: none;
+}
+
+.router-antenna {
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.router-antenna-tip {
+    filter: drop-shadow(0 0 5px currentColor);
+}
+
+.router-led {
+    filter: drop-shadow(0 0 4px currentColor);
+}
+
+.router-warning {
+    fill: #ff3158;
+    font-size: 24px;
+    font-weight: 900;
+    text-anchor: middle;
+}
+
+.router-label,
+.router-sub-label {
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+.network-link {
+    fill: none;
+    stroke: #6384ac;
+    stroke-width: 2.8;
+    opacity: 0.85;
+}
+
+.network-link.route-link {
+    stroke: #45ff9a;
+    stroke-width: 4;
+    filter: drop-shadow(0 0 6px #24ff85);
+}
+
+.network-link.failed-link {
+    stroke: #ff3158;
+    stroke-width: 3;
+    stroke-dasharray: 9 7;
+    opacity: 0.95;
+}
+
+.failed-link-cross {
+    fill: #ff3158;
+    font-size: 25px;
+    font-weight: 900;
+    text-anchor: middle;
+}
+
+.packet-travelling {
+    filter: drop-shadow(0 0 8px #ffffff);
+    stroke: #00e5ff;
+    stroke-width: 2;
+}
+
+.link-cost {
+    fill: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: #071426;
+    stroke-width: 5px;
+    stroke-linejoin: round;
+}
+
+.failed-cost {
+    fill: #ff526e;
+}
+
+.route-cost {
+    fill: #5cffaa;
+}
+
+/* Network connection improvements */
+
+#linksLayer {
+    overflow: visible;
+    pointer-events: none;
+}
+
+.network-link {
+    fill: none;
+    stroke: #536985;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0.9;
+    transition:
+        stroke 0.2s ease,
+        stroke-width 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.network-link.route-link {
+    stroke: #35e6a1;
+    stroke-width: 4;
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(53, 230, 161, 0.65));
+}
+
+.network-link.failed-link {
+    stroke: #fb5368;
+    stroke-width: 2.5;
+    stroke-dasharray: 7 6;
+    opacity: 0.8;
+}
+
+.link-cost {
+    font-size: 12px;
+    font-weight: 800;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    paint-order: stroke;
+    stroke: #101b30;
+    stroke-width: 5px;
+    fill: #dceaff;
+    pointer-events: none;
+}
+
+.link-cost.route-cost {
+    fill: #35e6a1;
+}
+
+.link-cost.failed-cost {
+    fill: #fb5368;
+}
+
+.failed-link-cross {
+    stroke: #fb5368;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+
+/* =========================================
+   CIRCULAR FUTURISTIC ROUTERS
+========================================= */
+
+.router-node {
+    cursor: pointer;
+    overflow: visible;
+}
+
+.router-halo {
+    fill: rgba(0, 190, 255, 0.055);
+    stroke: rgba(0, 210, 255, 0.12);
+    stroke-width: 1;
+    filter: drop-shadow(0 0 12px rgba(0, 200, 255, 0.25));
+    transition: all 0.25s ease;
+}
+
+.router-shell {
+    fill: #102b49;
+    stroke: #54d9ff;
+    stroke-width: 2;
+    filter: drop-shadow(0 4px 7px rgba(0, 0, 0, 0.7));
+}
+
+.router-base {
+    fill: #07182c;
+    stroke: #168dbd;
+    stroke-width: 1.5;
+}
+
+.router-top {
+    fill: #123c61;
+    stroke: #48cfff;
+    stroke-width: 1.8;
+}
+
+.router-antenna {
+    stroke: #65dfff;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.router-antenna-tip {
+    filter: drop-shadow(0 0 5px currentColor);
+}
+
+.router-wifi {
+    fill: none;
+    stroke: #55eaff;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 4px #00cfff);
+}
+
+.router-wifi-dot {
+    fill: #7af5ff;
+    filter: drop-shadow(0 0 5px #00dfff);
+}
+
+.router-port {
+    fill: #49e8ff;
+    filter: drop-shadow(0 0 3px #00dfff);
+}
+
+.router-led {
+    fill: #42ffb0;
+    filter: drop-shadow(0 0 5px #42ffb0);
+}
+
+.router-label {
+    fill: #f3f8ff;
+    font-size: 14px;
+    font-weight: 800;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: #07111f;
+    stroke-width: 3px;
+}
+
+.router-sub-label {
+    fill: #9bb8d8;
+    font-size: 10px;
+    font-weight: 700;
+    text-anchor: middle;
+}
+
+.router-node.selected .router-halo,
+.router-node.source-node .router-halo,
+.router-node.destination-node .router-halo {
+    fill: rgba(0, 225, 255, 0.12);
+    stroke: #37eaff;
+    stroke-width: 2;
+    filter: drop-shadow(0 0 14px rgba(0, 220, 255, 0.75));
+}
+
+.router-node.source-node .router-shell,
+.router-node.destination-node .router-shell {
+    stroke: #42ffae;
+    stroke-width: 2.8;
+}
+
+.router-node.failed .router-halo {
+    fill: rgba(255, 45, 75, 0.12);
+    stroke: rgba(255, 65, 90, 0.65);
+    filter: drop-shadow(0 0 15px rgba(255, 45, 75, 0.7));
+}
+
+.router-node.failed .router-shell {
+    fill: #351522;
+    stroke: #ff536d;
+}
+
+.router-node.failed .router-base {
+    fill: #220d19;
+    stroke: #ff536d;
+}
+
+.router-node.failed .router-top {
+    fill: #4b1728;
+    stroke: #ff7185;
+}
+
+.router-node.failed .router-wifi {
+    stroke: #ff687f;
+}
+
+.router-node.failed .router-wifi-dot,
+.router-node.failed .router-port,
+.router-node.failed .router-led {
+    fill: #ff526b;
+    filter: drop-shadow(0 0 4px #ff405d);
+}
+
+.router-node.failed .router-antenna {
+    stroke: #ff7185;
+}
+
+.router-node.failed .router-sub-label {
+    fill: #ff647b;
+}
+
+/* Moving packet markers */
+.moving-packet {
+    fill: #ffffff;
+    stroke: #54dfff;
+    stroke-width: 2.5px;
+    filter:
+        drop-shadow(0 0 5px #ffffff)
+        drop-shadow(0 0 12px #00cfff);
+    pointer-events: none;
+}
+
+
+#packetsLayer {
+    overflow: visible;
+    pointer-events: none;
+}
+
+.moving-packet {
+    fill: hsl(34, 95%, 41%) !important;
+    stroke: #38e8ff;
+    stroke-width: 3px;
+    opacity: 1;
+    filter:
+        drop-shadow(0 0 5px #ffffff)
+        drop-shadow(0 0 12px #00cfff);
+}
+
+
+/* Smooth network connections */
+#linksLayer {
+    overflow: visible;
+    pointer-events: none;
+}
+
+.network-link {
+    fill: none;
+    stroke: #718eae;
+    stroke-width: 2.8px;
+    stroke-linecap: round;
+    opacity: 0.85;
+    transition:
+        stroke 0.25s ease,
+        stroke-width 0.25s ease,
+        opacity 0.25s ease;
+}
+
+.network-link.route-link {
+    stroke: #43f5a2;
+    stroke-width: 4.5px;
+    opacity: 1;
+    filter: drop-shadow(0 0 5px rgba(67, 245, 162, 0.65));
+}
+
+.network-link.failed-link {
+    stroke: #ff536b;
+    stroke-width: 3px;
+    stroke-dasharray: 8 7;
+    opacity: 0.95;
+}
+
+.link-cost-bg {
+    fill: #09182b;
+    stroke: #547493;
+    stroke-width: 1.5px;
+    opacity: 0.96;
+}
+
+.link-cost-bg.route-cost-bg {
+    fill: #092d2b;
+    stroke: #36e9a0;
+}
+
+.link-cost-bg.failed-cost-bg {
+    fill: #351522;
+    stroke: #ff536b;
+}
+
+.link-cost {
+    fill: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    text-anchor: middle;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: #09182b;
+    stroke-width: 2px;
+}
+
+.link-cost.route-cost {
+    fill: #43f5a2;
+    stroke: #092d2b;
+}
+
+.link-cost.failed-cost {
+    fill: #ff7182;
+    stroke: #351522;
 }

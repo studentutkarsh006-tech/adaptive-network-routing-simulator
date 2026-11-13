@@ -365,15 +365,18 @@ namespace
 
 void configureRoutes(httplib::Server& server)
 {
+    // Handle browser CORS preflight requests.
+    // Do not add CORS headers here because the post-routing
+    // handler below adds them to the response.
     server.Options(
         R"(.*)",
         [](const httplib::Request&, httplib::Response& r)
         {
             r.status = 204;
-            cors(r);
         }
     );
 
+    // Add CORS headers exactly once to every response.
     server.set_post_routing_handler(
         [](const httplib::Request&, httplib::Response& r)
         {
@@ -407,11 +410,11 @@ void configureRoutes(httplib::Server& server)
                 Network n;
 
                 int count = queryInt(q, "routers", 8);
+                if (count < 4 || count > 12)
+    throw std::invalid_argument(
+        "routerCount must be between 4 and 12."
+    );
 
-                if (count < 4 || count > 15)
-                    throw std::invalid_argument(
-                        "Router count must be between 4 and 15."
-                    );
 
                 n.initializeTopology(count);
 
@@ -438,10 +441,10 @@ void configureRoutes(httplib::Server& server)
                     ? integer(b, "routerCount")
                     : 8;
 
-                if (count < 4 || count > 15)
-                    throw std::invalid_argument(
-                        "routerCount must be between 4 and 15."
-                    );
+                if (count < 4 || count > 12)
+    throw std::invalid_argument(
+        "Router count must be between 4 and 12."
+    );
 
                 std::string id;
 
