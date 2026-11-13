@@ -108,7 +108,7 @@
                 Active Links
             </span>
 
-            <strong id="linkCount">11</strong>
+            <strong id="linkCount">0</strong>
 
             <span class="metric-note">
                 Available connections
@@ -126,7 +126,37 @@
             <strong id="deliveredCount">0</strong>
 
             <span class="metric-note">
-                Successful simulations
+                Successful deliveries
+            </span>
+
+        </article>
+
+
+        <article class="metric-card">
+
+            <span class="metric-label">
+                Packets Lost
+            </span>
+
+            <strong id="lostCount">0</strong>
+
+            <span class="metric-note">
+                Undelivered packets
+            </span>
+
+        </article>
+
+
+        <article class="metric-card">
+
+            <span class="metric-label">
+                Pending Packets
+            </span>
+
+            <strong id="pendingCount">0</strong>
+
+            <span class="metric-note">
+                Waiting for processing
             </span>
 
         </article>
@@ -146,483 +176,518 @@
 
         </article>
 
-</section>
+    </section>
 
 
-<!-- MAIN WORKSPACE -->
+    <!-- MAIN WORKSPACE -->
 
-<section class="lab-workspace">
+    <section class="lab-workspace">
 
 
-    <!-- LEFT CONTROL PANEL -->
+        <!-- LEFT CONTROL PANEL -->
 
-    <aside class="control-panel">
+        <aside class="control-panel">
 
-        <div class="panel-heading">
-
-            <div>
-
-                <p class="eyebrow">
-                    CONFIGURATION
-                </p>
-
-                <h2>
-                    Simulation Controls
-                </h2>
-
-            </div>
-
-        </div>
-
-
-        <!-- TOPOLOGY -->
-
-        <div class="control-group">
-
-            <label for="topologySelect">
-                Network topology
-            </label>
-
-            <select id="topologySelect">
-
-                <option value="4">4 Routers</option>
-                <option value="5">5 Routers</option>
-                <option value="6">6 Routers</option>
-                <option value="7">7 Routers</option>
-                <option value="8" selected>8 Routers</option>
-                <option value="9">9 Routers</option>
-                <option value="10">10 Routers</option>
-                <option value="11">11 Routers</option>
-                <option value="12">12 Routers</option>
-                <option value="13">13 Routers</option>
-                <option value="14">14 Routers</option>
-                <option value="15">15 Routers</option>
-                <option value="16">16 Routers</option>
-                <option value="17">17 Routers</option>
-                <option value="18">18 Routers</option>
-                <option value="19">19 Routers</option>
-                <option value="20">20 Routers</option>
-
-            </select>
-
-        </div>
-
-
-        <!-- ROUTING ALGORITHM -->
-
-        <div class="control-group">
-
-            <label for="algorithmSelect">
-                Routing algorithm
-            </label>
-
-            <select id="algorithmSelect">
-
-                <option value="dijkstra">
-                    Dijkstra — Shortest Path
-                </option>
-
-                <option value="bfs">
-                    BFS — Breadth-First Search
-                </option>
-
-                <option value="dfs">
-                    DFS — Depth-First Search
-                </option>
-
-                <option value="adaptive">
-                    Adaptive — Cost and hop score
-                </option>
-
-            </select>
-
-            <p class="field-hint">
-                Choose how the backend calculates a route.
-            </p>
-
-        </div>
-
-
-        <!-- SOURCE AND DESTINATION -->
-
-        <div class="control-row">
-
-            <div class="control-group">
-
-                <label for="sourceSelect">
-                    Source
-                </label>
-
-                <select id="sourceSelect"></select>
-
-            </div>
-
-
-            <div class="control-group">
-
-                <label for="destinationSelect">
-                    Destination
-                </label>
-
-                <select id="destinationSelect"></select>
-
-            </div>
-
-        </div>
-
-
-        <!-- PACKET PRIORITY -->
-
-        <div class="control-group">
-
-            <label for="prioritySelect">
-                Packet priority
-            </label>
-
-            <select id="prioritySelect">
-
-                <option value="normal">
-                    Normal
-                </option>
-
-                <option value="high">
-                    High
-                </option>
-
-                <option value="critical">
-                    Critical
-                </option>
-
-            </select>
-
-        </div>
-
-
-        <!-- SIMULATION -->
-
-        <button
-            id="simulateBtn"
-            class="btn btn-primary btn-full"
-            type="button">
-
-        ▶ Simulate Route
-
-        </button>
-
-
-        <div class="panel-divider"></div>
-
-
-        <!-- FAILURE TESTING -->
-
-        <div class="panel-heading compact-heading">
-
-            <div>
-
-                <p class="eyebrow">
-                    FAULT INJECTION
-                </p>
-
-                <h2>
-                    Failure Testing
-                </h2>
-
-            </div>
-
-        </div>
-
-
-        <!-- ROUTER FAILURE -->
-
-        <div class="control-group">
-
-            <label for="failureRouterSelect">
-                Router
-            </label>
-
-            <select id="failureRouterSelect"></select>
-
-        </div>
-
-
-        <div class="control-row">
-
-            <button
-                id="failRouterBtn"
-                class="btn btn-danger"
-                type="button">
-
-                Fail Router
-
-            </button>
-
-
-            <button
-                id="repairRouterBtn"
-                class="btn btn-success"
-                type="button">
-
-                Repair Router
-
-            </button>
-
-        </div>
-
-
-        <!-- LINK FAILURE -->
-
-        <div class="control-group link-failure-group">
-
-            <label for="failureLinkSelect">
-                Connection
-            </label>
-
-            <select id="failureLinkSelect"></select>
-
-        </div>
-
-
-        <div class="control-row">
-
-            <button
-                id="breakLinkBtn"
-                class="btn btn-danger"
-                type="button">
-
-                Break Link
-
-            </button>
-
-
-            <button
-                id="restoreLinkBtn"
-                class="btn btn-success"
-                type="button">
-
-                Restore Link
-
-            </button>
-
-        </div>
-
-
-        <div class="panel-divider"></div>
-
-
-        <!-- ALGORITHM COMPARISON -->
-
-        <button
-            id="compareBtn"
-            class="btn btn-secondary btn-full"
-            type="button">
-
-        Compare Algorithms
-
-        </button>
-
-
-        <p class="demo-notice">
-            Routing decisions and failure controls
-            are powered by the C++ backend.
-        </p>
-
-
-    </aside>
-
-
-
-    <!-- NETWORK VISUALIZATION -->
-
-    <section class="network-panel">
-
-
-        <!-- PANEL HEADER -->
-
-        <div class="network-panel-header">
-
-            <div>
-
-                <p class="eyebrow">
-                    LIVE TOPOLOGY
-                </p>
-
-                <h2>
-                    Network Visualization
-                </h2>
-
-                <p class="panel-subtitle">
-                    Select a router to inspect its connections.
-                </p>
-
-            </div>
-
-
-            <!-- ZOOM -->
-
-            <div class="canvas-actions">
-
-                <button
-                    id="zoomOutBtn"
-                    class="icon-btn"
-                    type="button"
-                    aria-label="Zoom out">
-
-                    −
-
-                </button>
-
-
-                <button
-                    id="zoomResetBtn"
-                    class="icon-btn"
-                    type="button"
-                    aria-label="Reset zoom">
-
-                    100%
-
-                </button>
-
-
-                <button
-                    id="zoomInBtn"
-                    class="icon-btn"
-                    type="button"
-                    aria-label="Zoom in">
-
-                    +
-
-                </button>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- NETWORK LEGEND -->
-
-        <div class="network-legend">
-
-            <span>
-                <i class="legend-line"></i>
-                Active link
-            </span>
-
-
-            <span>
-                <i class="legend-line route-legend"></i>
-                Selected route
-            </span>
-
-
-            <span>
-                <i class="legend-dot failed-legend"></i>
-                Failed router
-            </span>
-
-        </div>
-
-
-
-        <!-- NETWORK CANVAS -->
-
-        <div
-            id="networkCanvas"
-            class="network-canvas">
-
-            <div
-                id="networkViewport"
-                class="network-viewport">
-
-                <svg
-                    id="networkSvg"
-                    class="network-svg"
-                    viewBox="0 0 800 520"
-                    role="img"
-                    aria-label="Interactive network topology">
-
-                    <g id="linksLayer"></g>
-
-                    <g id="packetsLayer"></g>
-
-                    <g id="routersLayer"></g>
-
-                </svg>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- ROUTE SUMMARY -->
-
-        <div
-            id="routeSummary"
-            class="route-summary"
-            aria-live="polite">
-
-            <span class="summary-icon">
-                ↗
-            </span>
-
-
-            <div>
-
-                <strong>
-                    Ready to simulate
-                </strong>
-
-                <p>
-                    Choose a source, destination,
-                    and algorithm.
-                </p>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- ALGORITHM COMPARISON -->
-
-        <section
-            id="comparisonPanel"
-            class="comparison-panel hidden">
-
-            <div class="section-heading">
+            <div class="panel-heading">
 
                 <div>
 
                     <p class="eyebrow">
-                        PERFORMANCE ANALYSIS
+                        CONFIGURATION
                     </p>
 
-                    <h3>
-                        Algorithm Comparison
-                    </h3>
+                    <h2>
+                        Simulation Controls
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- TOPOLOGY -->
+
+            <div class="control-group">
+
+                <label for="topologySelect">
+                    Network topology
+                </label>
+
+                <select id="topologySelect">
+
+                    <option value="4">4 Routers</option>
+                    <option value="5">5 Routers</option>
+                    <option value="6">6 Routers</option>
+                    <option value="7">7 Routers</option>
+                    <option value="8" selected>8 Routers</option>
+                    <option value="9">9 Routers</option>
+                    <option value="10">10 Routers</option>
+                    <option value="11">11 Routers</option>
+                    <option value="12">12 Routers</option>
+                    <option value="13">13 Routers</option>
+                    <option value="14">14 Routers</option>
+                    <option value="15">15 Routers</option>
+
+                </select>
+
+            </div>
+
+
+            <!-- ROUTING ALGORITHM -->
+
+            <div class="control-group">
+
+                <label for="algorithmSelect">
+                    Routing algorithm
+                </label>
+
+                <select id="algorithmSelect">
+
+                    <option value="dijkstra">
+                        Dijkstra — Shortest Path
+                    </option>
+
+                    <option value="bfs">
+                        BFS — Breadth-First Search
+                    </option>
+
+                    <option value="dfs">
+                        DFS — Depth-First Search
+                    </option>
+
+                    <option value="adaptive">
+                        Adaptive — Cost and hop score
+                    </option>
+
+                </select>
+
+                <p class="field-hint">
+                    Choose how the backend calculates a route.
+                </p>
+
+            </div>
+
+
+            <!-- SOURCE AND DESTINATION -->
+
+            <div class="control-row">
+
+                <div class="control-group">
+
+                    <label for="sourceSelect">
+                        Source
+                    </label>
+
+                    <select id="sourceSelect"></select>
 
                 </div>
 
 
-                <button
-                    id="closeComparisonBtn"
-                    class="icon-btn"
-                    type="button"
-                    aria-label="Close comparison">
+                <div class="control-group">
 
-                    ×
+                    <label for="destinationSelect">
+                        Destination
+                    </label>
+
+                    <select id="destinationSelect"></select>
+
+                </div>
+
+            </div>
+
+
+            <!-- PACKET PRIORITY -->
+
+            <div class="control-group">
+
+                <label for="prioritySelect">
+                    Packet priority
+                </label>
+
+                <select id="prioritySelect">
+
+                    <option value="normal">
+                        Normal
+                    </option>
+
+                    <option value="high">
+                        High
+                    </option>
+
+                    <option value="critical">
+                        Critical
+                    </option>
+
+                </select>
+
+                <p class="field-hint">
+                    Critical packets are processed before High and Normal packets.
+                </p>
+
+            </div>
+
+
+            <!-- PACKET COUNT -->
+
+            <div class="control-group">
+
+                <label for="packetCount">
+                    Number of packets
+                </label>
+
+                <input
+                    id="packetCount"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value="1"
+                    step="1">
+
+                <p class="field-hint">
+                    Enter a value between 1 and 100.
+                </p>
+
+            </div>
+
+
+            <!-- PACKET QUEUE AND PROCESSING -->
+
+            <button
+                id="simulateBtn"
+                class="btn btn-primary btn-full"
+                type="button">
+
+                + Queue Packets
+
+            </button>
+
+
+            <button
+                id="processPacketsBtn"
+                class="btn btn-secondary btn-full"
+                type="button">
+
+                ▶ Process Pending Packets
+
+            </button>
+
+
+            <div class="panel-divider"></div>
+
+
+            <!-- FAILURE TESTING -->
+
+            <div class="panel-heading compact-heading">
+
+                <div>
+
+                    <p class="eyebrow">
+                        FAULT INJECTION
+                    </p>
+
+                    <h2>
+                        Failure Testing
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- ROUTER FAILURE -->
+
+            <div class="control-group">
+
+                <label for="failureRouterSelect">
+                    Router
+                </label>
+
+                <select id="failureRouterSelect"></select>
+
+            </div>
+
+
+            <div class="control-row">
+
+                <button
+                    id="failRouterBtn"
+                    class="btn btn-danger"
+                    type="button">
+
+                    Fail Router
+
+                </button>
+
+
+                <button
+                    id="repairRouterBtn"
+                    class="btn btn-success"
+                    type="button">
+
+                    Repair Router
 
                 </button>
 
             </div>
 
 
-            <div
-                id="comparisonResults"
-                class="comparison-results">
+            <!-- LINK FAILURE -->
+
+            <div class="control-group link-failure-group">
+
+                <label for="failureLinkSelect">
+                    Connection
+                </label>
+
+                <select id="failureLinkSelect"></select>
 
             </div>
+
+
+            <div class="control-row">
+
+                <button
+                    id="breakLinkBtn"
+                    class="btn btn-danger"
+                    type="button">
+
+                    Break Link
+
+                </button>
+
+
+                <button
+                    id="restoreLinkBtn"
+                    class="btn btn-success"
+                    type="button">
+
+                    Restore Link
+
+                </button>
+
+            </div>
+
+
+            <div class="panel-divider"></div>
+
+
+            <!-- ALGORITHM COMPARISON -->
+
+            <button
+                id="compareBtn"
+                class="btn btn-secondary btn-full"
+                type="button">
+
+                Compare Algorithms
+
+            </button>
+
+
+            <p class="demo-notice">
+                Routing decisions, packet scheduling,
+                and failure recovery are powered by the C++ backend.
+            </p>
+
+
+        </aside>
+
+
+
+        <!-- NETWORK VISUALIZATION -->
+
+        <section class="network-panel">
+
+
+            <!-- PANEL HEADER -->
+
+            <div class="network-panel-header">
+
+                <div>
+
+                    <p class="eyebrow">
+                        LIVE TOPOLOGY
+                    </p>
+
+                    <h2>
+                        Network Visualization
+                    </h2>
+
+                    <p class="panel-subtitle">
+                        Select a router to inspect its connections.
+                    </p>
+
+                </div>
+
+
+                <!-- ZOOM -->
+
+                <div class="canvas-actions">
+
+                    <button
+                        id="zoomOutBtn"
+                        class="icon-btn"
+                        type="button"
+                        aria-label="Zoom out">
+
+                        −
+
+                    </button>
+
+
+                    <button
+                        id="zoomResetBtn"
+                        class="icon-btn"
+                        type="button"
+                        aria-label="Reset zoom">
+
+                        100%
+
+                    </button>
+
+
+                    <button
+                        id="zoomInBtn"
+                        class="icon-btn"
+                        type="button"
+                        aria-label="Zoom in">
+
+                        +
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- NETWORK LEGEND -->
+
+            <div class="network-legend">
+
+                <span>
+                    <i class="legend-line"></i>
+                    Active link
+                </span>
+
+
+                <span>
+                    <i class="legend-line route-legend"></i>
+                    Selected route
+                </span>
+
+
+                <span>
+                    <i class="legend-dot failed-legend"></i>
+                    Failed router
+                </span>
+
+            </div>
+
+
+
+            <!-- NETWORK CANVAS -->
+
+            <div
+                id="networkCanvas"
+                class="network-canvas">
+
+                <div
+                    id="networkViewport"
+                    class="network-viewport">
+
+                    <svg
+                        id="networkSvg"
+                        class="network-svg"
+                        viewBox="0 0 800 520"
+                        role="img"
+                        aria-label="Interactive network topology">
+
+                        <g id="linksLayer"></g>
+
+                        <g id="packetsLayer"></g>
+
+                        <g id="routersLayer"></g>
+
+                    </svg>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ROUTE SUMMARY -->
+
+            <div
+                id="routeSummary"
+                class="route-summary"
+                aria-live="polite">
+
+                <span class="summary-icon">
+                    ↗
+                </span>
+
+
+                <div>
+
+                    <strong>
+                        Ready to simulate
+                    </strong>
+
+                    <p>
+                        Choose a source, destination,
+                        and algorithm.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- ALGORITHM COMPARISON -->
+
+            <section
+                id="comparisonPanel"
+                class="comparison-panel hidden">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <p class="eyebrow">
+                            PERFORMANCE ANALYSIS
+                        </p>
+
+                        <h3>
+                            Algorithm Comparison
+                        </h3>
+
+                    </div>
+
+
+                    <button
+                        id="closeComparisonBtn"
+                        class="icon-btn"
+                        type="button"
+                        aria-label="Close comparison">
+
+                        ×
+
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="comparisonResults"
+                    class="comparison-results">
+
+                </div>
+
+            </section>
+
 
         </section>
 
@@ -630,117 +695,113 @@
     </section>
 
 
-</section>
+
+    <!-- DETAILS SECTION -->
+
+    <section class="details-grid">
 
 
+        <!-- ROUTER DETAILS -->
 
-<!-- DETAILS SECTION -->
+        <article class="info-panel">
 
-<section class="details-grid">
+            <div class="section-heading">
 
+                <div>
 
-    <!-- ROUTER DETAILS -->
+                    <p class="eyebrow">
+                        DEVICE INSPECTOR
+                    </p>
 
-    <article class="info-panel">
+                    <h2>
+                        Router Details
+                    </h2>
 
-        <div class="section-heading">
-
-            <div>
-
-                <p class="eyebrow">
-                    DEVICE INSPECTOR
-                </p>
-
-                <h2>
-                    Router Details
-                </h2>
-
-            </div>
-
-        </div>
-
-
-        <div
-            id="routerDetails"
-            class="router-details">
-
-            <p class="empty-state">
-                Select a router in the network
-                to see its details.
-            </p>
-
-        </div>
-
-    </article>
-
-
-
-    <!-- EVENT LOG -->
-
-    <article class="info-panel">
-
-        <div class="section-heading">
-
-            <div>
-
-                <p class="eyebrow">
-                    ACTIVITY
-                </p>
-
-                <h2>
-                    Simulation Event Log
-                </h2>
+                </div>
 
             </div>
 
 
-            <button
-                id="clearLogBtn"
-                class="text-btn"
-                type="button">
+            <div
+                id="routerDetails"
+                class="router-details">
 
-                Clear
+                <p class="empty-state">
+                    Select a router in the network
+                    to see its details.
+                </p>
 
-            </button>
+            </div>
 
-        </div>
-
-
-        <div
-            id="eventLog"
-            class="event-log"
-            aria-live="polite">
-
-            <p class="log-empty">
-                Your simulation events will appear here.
-            </p>
-
-        </div>
-
-    </article>
-
-
-</section>
+        </article>
 
 
 
-<!-- FOOTER -->
+        <!-- EVENT LOG -->
 
-<footer class="lab-footer">
+        <article class="info-panel">
 
-    <span>
-        NETROUTE · Network Lab
-    </span>
+            <div class="section-heading">
 
-    <span>
-        C++ Routing Simulation
-    </span>
+                <div>
 
-</footer>
+                    <p class="eyebrow">
+                        ACTIVITY
+                    </p>
+
+                    <h2>
+                        Simulation Event Log
+                    </h2>
+
+                </div>
+
+
+                <button
+                    id="clearLogBtn"
+                    class="text-btn"
+                    type="button">
+
+                    Clear
+
+                </button>
+
+            </div>
+
+
+            <div
+                id="eventLog"
+                class="event-log"
+                aria-live="polite">
+
+                <p class="log-empty">
+                    Your simulation events will appear here.
+                </p>
+
+            </div>
+
+        </article>
+
+
+    </section>
+
+
+
+    <!-- FOOTER -->
+
+    <footer class="lab-footer">
+
+        <span>
+            NETROUTE · Network Lab
+        </span>
+
+        <span>
+            C++ Routing Simulation
+        </span>
+
+    </footer>
 
 
 </main>
 
 </body>
-
 </html>

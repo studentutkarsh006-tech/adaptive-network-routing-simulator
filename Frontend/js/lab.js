@@ -1,8 +1,8 @@
+
 "use strict";
 
 document.addEventListener("DOMContentLoaded", () => {
     const $ = (id) => document.getElementById(id);
-
     const API = window.NETROUTE_API;
 
     if (!API) {
@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", () => {
         routerCount: $("routerCount"),
         linkCount: $("linkCount"),
         deliveredCount: $("deliveredCount"),
+        lostCount: $("lostCount"),
+        pendingCount: $("pendingCount"),
         failedCount: $("failedCount"),
 
         topologySelect: $("topologySelect"),
@@ -21,11 +23,13 @@ document.addEventListener("DOMContentLoaded", () => {
         sourceSelect: $("sourceSelect"),
         destinationSelect: $("destinationSelect"),
         prioritySelect: $("prioritySelect"),
+        packetCount: $("packetCount"),
 
         failureRouterSelect: $("failureRouterSelect"),
         failureLinkSelect: $("failureLinkSelect"),
 
         simulateBtn: $("simulateBtn"),
+        processPacketsBtn: $("processPacketsBtn"),
         resetBtn: $("resetBtn"),
         failRouterBtn: $("failRouterBtn"),
         repairRouterBtn: $("repairRouterBtn"),
@@ -58,7 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "algorithmSelect",
         "sourceSelect",
         "destinationSelect",
+        "prioritySelect",
+        "packetCount",
         "simulateBtn",
+        "processPacketsBtn",
         "resetBtn",
         "networkSvg",
         "linksLayer",
@@ -77,6 +84,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const SVG_NS = "http://www.w3.org/2000/svg";
+
+    const PRIORITY_MAP = Object.freeze({
+        normal: 1,
+        high: 5,
+        critical: 10
+    });
 
     const state = {
         simulationId: null,
@@ -97,13 +110,13 @@ document.addEventListener("DOMContentLoaded", () => {
         pendingPackets: [],
 
         zoom: 1,
-
         busy: false,
         sessionSequence: 0
     };
 
+
     // --------------------------------------------------
-    // Helpers
+    // API HELPERS
     // --------------------------------------------------
 
     function request(path, body) {
@@ -127,7 +140,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function backendRouterId(name) {
-        const router = state.routers.find((item) => item.name === name);
+        const router = state.routers.find(
+            (item) => item.name === name
+        );
 
         if (!router) {
             throw new Error(`Router ${name} does not exist.`);
@@ -141,7 +156,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getRouter(name) {
-        return state.routers.find((router) => router.name === name);
+        return state.routers.find(
+            (router) => router.name === name
+        );
     }
 
     function getLink(a, b) {
@@ -164,7 +181,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return Boolean(
             link &&
             link.active &&
-            !state.brokenLinks.has(linkKey(link.source, link.destination)) &&
+            !state.brokenLinks.has(
+                linkKey(link.source, link.destination)
+            ) &&
             !isRouterFailed(link.source) &&
             !isRouterFailed(link.destination)
         );
@@ -209,6 +228,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+
+    // --------------------------------------------------
+    // UI HELPERS
+    // --------------------------------------------------
+
     function showSummary(title, message, type = "info") {
         el.routeSummary.className = `route-summary ${type}`;
 
@@ -226,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setText(paragraph, message);
     }
 
-    function log(message, type = "info") {
+    function log(message, type = "info", timestamp = null) {
         const empty = el.eventLog.querySelector(".log-empty");
 
         if (empty) {
@@ -238,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const time = document.createElement("span");
         time.className = "log-time";
-        time.textContent = new Date().toLocaleTimeString();
+        time.textContent = formatTimestamp(timestamp);
 
         const text = document.createElement("span");
         text.className = "log-message";
@@ -262,6 +286,33 @@ document.addEventListener("DOMContentLoaded", () => {
         el.eventLog.appendChild(empty);
     }
 
+    function formatTimestamp(value) {
+        if (value === undefined || value === null || value === "") {
+            return "--:--:--";
+        }
+
+        let date;
+
+        if (typeof value === "number" || /^\d+$/.test(String(value))) {
+            let numeric = Number(value);
+
+            // Support Unix seconds and milliseconds.
+            if (numeric < 100000000000) {
+                numeric *= 1000;
+            }
+
+            date = new Date(numeric);
+        } else {
+            date = new Date(value);
+        }
+
+        if (Number.isNaN(date.getTime())) {
+            return "--:--:--";
+        }
+
+        return date.toLocaleTimeString();
+    }
+
     function setBackendStatus(message) {
         const status = document.querySelector(".lab-status");
 
@@ -280,17 +331,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
         [
             el.simulateBtn,
+            el.processPacketsBtn,
             el.resetBtn,
             el.failRouterBtn,
             el.repairRouterBtn,
             el.breakLinkBtn,
             el.restoreLinkBtn,
-            el.compareBtn
+            el.compareBtn,
+            el.topologySelect
         ].forEach((button) => {
             if (button) {
                 button.disabled = value;
             }
         });
+
+        updatePacketControls();
+    }
+
+    function updatePacketControls() {
+        const hasPending = state.pendingPackets.length > 0;
+
+        if (el.processPacketsBtn) {
+            el.processPacketsBtn.disabled =
+                state.busy || !hasPending;
+        }
     }
 
     async function runAction(action) {
@@ -318,8 +382,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+
     // --------------------------------------------------
-    // Topology
+    // TOPOLOGY
     // --------------------------------------------------
 
     function calculatePositions(routers) {
@@ -376,7 +441,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const routers = calculatePositions(topology.routers);
-
         const idToName = new Map();
 
         routers.forEach((router) => {
@@ -417,8 +481,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 .map((link) => linkKey(link.source, link.destination))
         );
 
-        state.source = routers[0]?.name || "";
-        state.destination = routers.at(-1)?.name || "";
+        if (!routers.some((router) => router.name === state.source)) {
+            state.source = routers[0]?.name || "";
+        }
+
+        if (!routers.some((router) => router.name === state.destination)) {
+            state.destination = routers.at(-1)?.name || "";
+        }
 
         state.selectedRouter = null;
         state.route = [];
@@ -436,8 +505,8 @@ document.addEventListener("DOMContentLoaded", () => {
     async function createSimulation() {
         const count = Number(el.topologySelect.value || 8);
 
-        if (!Number.isInteger(count) || count < 4 || count > 20) {
-            throw new Error("Router count must be between 4 and 20.");
+        if (!Number.isInteger(count) || count < 4 || count > 15) {
+            throw new Error("Router count must be between 4 and 15.");
         }
 
         state.sessionSequence++;
@@ -448,6 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
         state.route = [];
         state.packets = [];
         state.pendingPackets = [];
+        state.metrics = null;
 
         clearLog();
 
@@ -494,14 +564,15 @@ document.addEventListener("DOMContentLoaded", () => {
         state.packets = [];
         state.pendingPackets = [];
 
-        state.failedRouters.clear();
-        state.brokenLinks.clear();
-
         if (result.metrics) {
             state.metrics = result.metrics;
         }
 
         const session = await request(simulationPath());
+
+        if (!session || !session.topology) {
+            throw new Error("Backend did not return the reset topology.");
+        }
 
         applyTopology(session.topology);
 
@@ -509,15 +580,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         showSummary(
             "Simulation reset",
-            "Network restored to its initial topology.",
+            "Network and packet history restored to their initial state.",
             "success"
         );
 
         log("Simulation reset.", "success");
     }
 
+
     // --------------------------------------------------
-    // Select controls
+    // SELECT CONTROLS
     // --------------------------------------------------
 
     function fillSelect(select, values, preferred, disabled = () => false) {
@@ -601,8 +673,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+
     // --------------------------------------------------
-    // Render network
+    // NETWORK RENDERING
     // --------------------------------------------------
 
     function renderAll() {
@@ -611,6 +684,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderRouters();
         renderRouterDetails(state.selectedRouter);
         renderPackets();
+        updatePacketControls();
     }
 
     function renderLinks() {
@@ -641,7 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 y1: source.y,
                 x2: destination.x,
                 y2: destination.y,
-
                 class:
                     "network-link" +
                     (routeLink && available ? " route-link" : "") +
@@ -655,7 +728,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 {
                     x: (source.x + destination.x) / 2,
                     y: (source.y + destination.y) / 2 - 8,
-
                     class:
                         "link-cost" +
                         (routeLink && available ? " route-cost" : "") +
@@ -665,7 +737,6 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             group.appendChild(label);
-
             el.linksLayer.appendChild(group);
         });
     }
@@ -675,18 +746,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         state.routers.forEach((router) => {
             const failed = isRouterFailed(router.name);
-
-            const selected =
-                state.selectedRouter === router.name;
-
-            const onRoute =
-                state.route.includes(router.name);
-
-            const isSource =
-                state.source === router.name;
-
-            const isDestination =
-                state.destination === router.name;
+            const selected = state.selectedRouter === router.name;
+            const onRoute = state.route.includes(router.name);
+            const isSource = state.source === router.name;
+            const isDestination = state.destination === router.name;
 
             const classes = [
                 "router-node",
@@ -841,6 +904,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!router) return;
 
         const failed = isRouterFailed(name);
+
         const adjacent = state.links.filter(
             (link) =>
                 link.source === name ||
@@ -882,8 +946,9 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
+
     // --------------------------------------------------
-    // Routing
+    // ROUTING
     // --------------------------------------------------
 
     async function findRoute() {
@@ -915,7 +980,7 @@ document.addEventListener("DOMContentLoaded", () => {
             throw new Error("Backend returned an invalid route.");
         }
 
-        state.route = result.route.map(Number).map(routerId => {
+        state.route = result.route.map(Number).map((routerId) => {
             const router = state.routers.find(
                 (item) => item.backendId === routerId
             );
@@ -943,45 +1008,58 @@ document.addEventListener("DOMContentLoaded", () => {
         return result;
     }
 
+
     // --------------------------------------------------
-    // Packet simulation
+    // PACKET QUEUE
     // --------------------------------------------------
 
     function selectedPriority() {
-        const value = String(el.prioritySelect?.value || "normal");
+        const value = String(
+            el.prioritySelect?.value || "normal"
+        ).toLowerCase();
 
-        const priorities = {
-            normal: 1,
-            high: 5,
-            critical: 10
-        };
+        if (!Object.prototype.hasOwnProperty.call(PRIORITY_MAP, value)) {
+            throw new Error("Select a valid packet priority.");
+        }
 
-        return priorities[value] || Number(value) || 1;
+        return PRIORITY_MAP[value];
     }
 
-    async function simulatePackets() {
+    function selectedPacketCount() {
+        const count = Number(el.packetCount.value);
+
+        if (!Number.isInteger(count) || count < 1 || count > 100) {
+            throw new Error("Packet count must be between 1 and 100.");
+        }
+
+        return count;
+    }
+
+    async function queuePackets() {
         const source = el.sourceSelect.value;
         const destination = el.destinationSelect.value;
-        const algorithm = el.algorithmSelect.value;
+        const count = selectedPacketCount();
+        const priority = selectedPriority();
 
         if (!source || !destination) {
-            throw new Error("Select source and destination.");
+            throw new Error("Select source and destination routers.");
         }
 
         if (isRouterFailed(source) || isRouterFailed(destination)) {
-            throw new Error("Source or destination is offline.");
+            throw new Error("Source or destination router is offline.");
         }
 
         state.source = source;
         state.destination = destination;
+        state.route = [];
 
         const created = await request(
             simulationPath("/packets"),
             {
                 source: backendRouterId(source),
                 destination: backendRouterId(destination),
-                priority: selectedPriority(),
-                count: 1
+                priority,
+                count
             }
         );
 
@@ -989,7 +1067,32 @@ document.addEventListener("DOMContentLoaded", () => {
             throw new Error("Backend did not return created packets.");
         }
 
-        log("Packet created and queued.", "info");
+        await refreshAll();
+
+        renderAll();
+
+        showSummary(
+            "Packets queued",
+            `${created.packets.length} packet(s) added to the backend queue. They are waiting for processing.`,
+            "success"
+        );
+
+        log(
+            `${created.packets.length} packet(s) queued with priority ${priority}.`,
+            "success"
+        );
+    }
+
+    async function processPendingPackets() {
+        if (state.pendingPackets.length === 0) {
+            throw new Error("There are no pending packets to process.");
+        }
+
+        const algorithm = el.algorithmSelect.value;
+
+        if (!algorithm) {
+            throw new Error("Select a routing algorithm.");
+        }
 
         const processed = await request(
             simulationPath("/packets/process"),
@@ -1006,7 +1109,11 @@ document.addEventListener("DOMContentLoaded", () => {
             (packet) => packet.status === "delivered"
         );
 
-        if (delivered.length) {
+        const lost = processed.packets.filter(
+            (packet) => packet.status === "lost"
+        );
+
+        if (delivered.length > 0) {
             const packet = delivered[0];
 
             state.route = (packet.route || []).map((id) => {
@@ -1016,30 +1123,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 return router ? router.name : routerName(id);
             });
-
-            showSummary(
-                "Packet delivered",
-                `${algorithm} · ${state.route.join(" → ")} · Cost ${packet.cost}`,
-                "success"
-            );
-
-            log(
-                `Packet ${packet.id} delivered using ${algorithm}.`,
-                "success"
-            );
-        } else {
-            showSummary(
-                "Packet lost",
-                "The backend could not deliver the packet.",
-                "error"
-            );
-
-            log("Packet could not be delivered.", "error");
         }
 
         await refreshAll();
 
         renderAll();
+
+        if (delivered.length > 0 && lost.length === 0) {
+            showSummary(
+                "Packets processed",
+                `${delivered.length} packet(s) delivered successfully using ${algorithm}.`,
+                "success"
+            );
+        } else if (delivered.length > 0 && lost.length > 0) {
+            showSummary(
+                "Processing completed",
+                `${delivered.length} delivered and ${lost.length} lost using ${algorithm}.`,
+                "info"
+            );
+        } else {
+            showSummary(
+                "Packets lost",
+                `${lost.length} packet(s) could not be delivered.`,
+                "error"
+            );
+        }
+
+        log(
+            `Processed ${processed.packets.length} packet(s) using ${algorithm}: ${delivered.length} delivered, ${lost.length} lost.`,
+            lost.length > 0 && delivered.length === 0
+                ? "error"
+                : "success"
+        );
     }
 
     async function refreshPackets() {
@@ -1048,10 +1163,16 @@ document.addEventListener("DOMContentLoaded", () => {
             request(simulationPath("/packets/pending"))
         ]);
 
-        state.packets = history.packets || [];
-        state.pendingPackets = pending.pendingPackets || [];
+        state.packets = Array.isArray(history.packets)
+            ? history.packets
+            : [];
+
+        state.pendingPackets = Array.isArray(pending.pendingPackets)
+            ? pending.pendingPackets
+            : [];
 
         renderPackets();
+        updatePacketControls();
     }
 
     function renderPackets() {
@@ -1059,33 +1180,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
         el.packetsLayer.replaceChildren();
 
-        state.packets
-            .filter((packet) => packet.status === "pending")
-            .forEach((packet) => {
-                const source = state.routers.find(
-                    (router) => router.backendId === Number(packet.source)
-                );
+        state.pendingPackets.forEach((packet) => {
+            const source = state.routers.find(
+                (router) => router.backendId === Number(packet.source)
+            );
 
-                if (!source) return;
+            if (!source) return;
 
-                const group = svg("g", {
-                    class: "packet-node",
-                    transform: `translate(${source.x},${source.y - 45})`
-                });
-
-                group.appendChild(svg("circle", {
-                    cx: 0,
-                    cy: 0,
-                    r: 7,
-                    class: "packet-dot"
-                }));
-
-                el.packetsLayer.appendChild(group);
+            const group = svg("g", {
+                class: "packet-node",
+                transform: `translate(${source.x},${source.y - 45})`
             });
+
+            group.appendChild(svg("circle", {
+                cx: 0,
+                cy: 0,
+                r: 7,
+                class: "packet-dot"
+            }));
+
+            const title = svg(
+                "title",
+                {},
+                `Packet ${packet.id} · Priority ${packet.priority}`
+            );
+
+            group.appendChild(title);
+            el.packetsLayer.appendChild(group);
+        });
     }
 
+
     // --------------------------------------------------
-    // Router and link failure operations
+    // ROUTER FAILURE AND RECOVERY
     // --------------------------------------------------
 
     async function routerFailure(repair) {
@@ -1096,6 +1223,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const id = backendRouterId(name);
+
+        if (repair && !isRouterFailed(name)) {
+            throw new Error(`${name} is already active.`);
+        }
+
+        if (!repair && isRouterFailed(name)) {
+            throw new Error(`${name} is already failed.`);
+        }
 
         const path = simulationPath(
             repair ? "/routers/repair" : "/routers/fail"
@@ -1116,7 +1251,7 @@ document.addEventListener("DOMContentLoaded", () => {
         log(
             repair
                 ? `${name} repaired.`
-                : `${name} failed.`,
+                : `${name} failed. Pending packets will be evaluated when processed.`,
             repair ? "success" : "warning"
         );
     }
@@ -1129,11 +1264,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const link = state.links.find(
-            (item) => linkKey(item.source, item.destination) === key
+            (item) =>
+                linkKey(item.source, item.destination) === key
         );
 
         if (!link) {
             throw new Error("Selected link was not found.");
+        }
+
+        if (repair && link.active) {
+            throw new Error("Selected link is already active.");
+        }
+
+        if (!repair && !link.active) {
+            throw new Error("Selected link is already failed.");
         }
 
         const path = simulationPath(
@@ -1156,13 +1300,14 @@ document.addEventListener("DOMContentLoaded", () => {
         log(
             repair
                 ? `Link ${link.source} ↔ ${link.destination} restored.`
-                : `Link ${link.source} ↔ ${link.destination} failed.`,
+                : `Link ${link.source} ↔ ${link.destination} failed. Pending packets will be evaluated when processed.`,
             repair ? "success" : "warning"
         );
     }
 
+
     // --------------------------------------------------
-    // Metrics and backend synchronization
+    // METRICS AND BACKEND SYNCHRONIZATION
     // --------------------------------------------------
 
     async function refreshMetrics() {
@@ -1171,7 +1316,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         state.metrics = metrics;
-
         updateMetrics();
     }
 
@@ -1192,33 +1336,45 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateMetrics() {
-        setText(
-            el.routerCount,
-            state.routers.length
-        );
-
-        setText(
-            el.linkCount,
-            availableLinks().length
-        );
-
         const metrics = state.metrics || {};
 
         setText(
+            el.routerCount,
+            metrics.totalRouters ?? state.routers.length
+        );
+
+        const activeLinkCount = availableLinks().length;
+
+        setText(
+            el.linkCount,
+            metrics.activeLinks ?? activeLinkCount
+        );
+
+        setText(
             el.deliveredCount,
-            metrics.deliveredPackets || 0
+            metrics.deliveredPackets ?? 0
+        );
+
+        setText(
+            el.lostCount,
+            metrics.lostPackets ?? 0
+        );
+
+        setText(
+            el.pendingCount,
+            metrics.pendingPackets ?? state.pendingPackets.length
         );
 
         setText(
             el.failedCount,
-            state.failedRouters.size
+            metrics.failedRouters ?? state.failedRouters.size
         );
 
         if (el.deliveredCount?.parentElement) {
-            const total = metrics.totalPackets || 0;
-            const delivered = metrics.deliveredPackets || 0;
-            const lost = metrics.lostPackets || 0;
-            const pending = metrics.pendingPackets || 0;
+            const total = metrics.totalPackets ?? 0;
+            const delivered = metrics.deliveredPackets ?? 0;
+            const lost = metrics.lostPackets ?? 0;
+            const pending = metrics.pendingPackets ?? 0;
 
             el.deliveredCount.parentElement.title =
                 `Total: ${total}, Delivered: ${delivered}, Lost: ${lost}, Pending: ${pending}`;
@@ -1228,10 +1384,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (note) {
                 note.textContent =
-                    `${delivered}/${total} delivered · ${lost} lost`;
+                    `${delivered}/${total} delivered`;
+            }
+        }
+
+        if (el.lostCount?.parentElement) {
+            const note = el.lostCount.parentElement
+                .querySelector(".metric-note");
+
+            if (note) {
+                note.textContent = `${metrics.deliveryRate ?? 0}% delivery rate`;
+            }
+        }
+
+        if (el.pendingCount?.parentElement) {
+            const note = el.pendingCount.parentElement
+                .querySelector(".metric-note");
+
+            if (note) {
+                note.textContent = "Waiting for processing";
             }
         }
     }
+
+
+    // --------------------------------------------------
+    // EVENT LOG
+    // --------------------------------------------------
 
     function formatEvent(event) {
         const detail = event.detail || {};
@@ -1240,11 +1419,20 @@ document.addEventListener("DOMContentLoaded", () => {
             case "simulation_created":
                 return "Simulation created.";
 
+            case "simulation_reset":
+                return "Simulation reset.";
+
             case "packets_created":
                 return `${detail.count || 1} packet(s) queued.`;
 
             case "packets_processed":
                 return `${detail.count || 0} packet(s) processed using ${detail.algorithm || "Dijkstra"}.`;
+
+            case "packet_delivered":
+                return `Packet ${detail.packetId ?? detail.id ?? ""} delivered.`;
+
+            case "packet_lost":
+                return `Packet ${detail.packetId ?? detail.id ?? ""} lost.`;
 
             case "router_failed":
                 return `Router R${detail.routerId} failed.`;
@@ -1258,15 +1446,40 @@ document.addEventListener("DOMContentLoaded", () => {
             case "link_repaired":
                 return `Link R${detail.source} ↔ R${detail.destination} restored.`;
 
+            case "algorithm_comparison":
+            case "algorithms_compared":
+                return "Routing algorithms compared.";
+
             default:
                 return `Backend event: ${event.type}`;
         }
     }
 
+    function eventClass(event) {
+        if (
+            event.type === "packet_lost" ||
+            event.type === "router_failed" ||
+            event.type === "link_failed"
+        ) {
+            return "error";
+        }
+
+        if (
+            event.type === "packet_delivered" ||
+            event.type === "router_repaired" ||
+            event.type === "link_repaired" ||
+            event.type === "simulation_created"
+        ) {
+            return "success";
+        }
+
+        return "info";
+    }
+
     function renderEvents(events) {
         el.eventLog.replaceChildren();
 
-        if (!events.length) {
+        if (!Array.isArray(events) || events.length === 0) {
             const empty = document.createElement("p");
             empty.className = "log-empty";
             empty.textContent =
@@ -1278,11 +1491,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         events.slice(-80).reverse().forEach((event) => {
             const entry = document.createElement("div");
-            entry.className = "log-entry info";
+            entry.className = `log-entry ${eventClass(event)}`;
 
             const time = document.createElement("span");
             time.className = "log-time";
-            time.textContent = new Date().toLocaleTimeString();
+            time.textContent = formatTimestamp(event.timestamp);
 
             const message = document.createElement("span");
             message.className = "log-message";
@@ -1294,8 +1507,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+
     // --------------------------------------------------
-    // Algorithm comparison
+    // ALGORITHM COMPARISON
     // --------------------------------------------------
 
     async function compareAlgorithms() {
@@ -1304,6 +1518,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!source || !destination) {
             throw new Error("Select source and destination.");
+        }
+
+        if (isRouterFailed(source) || isRouterFailed(destination)) {
+            throw new Error("Source or destination router is offline.");
         }
 
         const result = await request(
@@ -1328,6 +1546,24 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderComparison(results) {
         el.comparisonResults.replaceChildren();
 
+        const reachable = results.filter(
+            (result) => result.reachable !== false
+        );
+
+        const bestCost = reachable.length
+            ? Math.min(...reachable.map((result) => Number(result.cost)))
+            : null;
+
+        const bestHops = reachable.length
+            ? Math.min(...reachable.map((result) => Number(result.hops)))
+            : null;
+
+        const bestTime = reachable.length
+            ? Math.min(...reachable.map(
+                (result) => Number(result.executionTimeMs || 0)
+            ))
+            : null;
+
         results.forEach((result) => {
             const card = document.createElement("div");
             card.className = "comparison-card";
@@ -1341,24 +1577,59 @@ document.addEventListener("DOMContentLoaded", () => {
                 status.textContent =
                     result.error || "Destination unreachable.";
             } else {
-                status.textContent =
-                    `Cost: ${result.cost} · Hops: ${result.hops} · Time: ${Number(result.executionTimeMs || 0).toFixed(3)} ms`;
+                const cost = Number(result.cost);
+                const hops = Number(result.hops);
+                const time = Number(result.executionTimeMs || 0);
+
+                const details = [];
+
+                details.push(
+                    `Cost: ${cost}${cost === bestCost ? " · Best cost" : ""}`
+                );
+
+                details.push(
+                    `Hops: ${hops}${hops === bestHops ? " · Fewest hops" : ""}`
+                );
+
+                details.push(
+                    `Time: ${time.toFixed(3)} ms${time === bestTime ? " · Fastest" : ""}`
+                );
+
+                status.textContent = details.join(" · ");
             }
 
             const route = document.createElement("p");
 
             route.textContent = result.reachable === false
                 ? "No route"
-                : (result.route || []).map(routerName).join(" → ");
+                : (result.route || [])
+                    .map((id) => {
+                        const router = state.routers.find(
+                            (item) => item.backendId === Number(id)
+                        );
+
+                        return router ? router.name : routerName(id);
+                    })
+                    .join(" → ");
 
             card.append(heading, status, route);
 
             el.comparisonResults.appendChild(card);
         });
+
+        if (reachable.length > 0) {
+            const note = document.createElement("p");
+            note.className = "field-hint";
+            note.textContent =
+                "Best cost, fewest hops, and fastest execution are evaluated separately. No single algorithm is automatically best in every metric.";
+
+            el.comparisonResults.appendChild(note);
+        }
     }
 
+
     // --------------------------------------------------
-    // Zoom
+    // ZOOM
     // --------------------------------------------------
 
     function setZoom(value) {
@@ -1373,12 +1644,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+
     // --------------------------------------------------
-    // Events
+    // EVENT LISTENERS
     // --------------------------------------------------
 
     el.simulateBtn.addEventListener("click", () => {
-        runAction(simulatePackets);
+        runAction(queuePackets);
+    });
+
+    el.processPacketsBtn?.addEventListener("click", () => {
+        runAction(processPendingPackets);
     });
 
     el.resetBtn.addEventListener("click", () => {
@@ -1434,6 +1710,14 @@ document.addEventListener("DOMContentLoaded", () => {
         runAction(createSimulation);
     });
 
+    el.packetCount.addEventListener("change", () => {
+        const count = Number(el.packetCount.value);
+
+        if (!Number.isInteger(count) || count < 1 || count > 100) {
+            el.packetCount.value = "1";
+        }
+    });
+
     el.zoomInBtn?.addEventListener("click", () => {
         setZoom(state.zoom + 0.1);
     });
@@ -1446,8 +1730,9 @@ document.addEventListener("DOMContentLoaded", () => {
         setZoom(1);
     });
 
+
     // --------------------------------------------------
-    // Start
+    // START
     // --------------------------------------------------
 
     clearLog();
@@ -1456,6 +1741,8 @@ document.addEventListener("DOMContentLoaded", () => {
         "Initializing NETROUTE",
         "Connecting to the simulation backend."
     );
+
+    setZoom(1);
 
     runAction(createSimulation);
 });

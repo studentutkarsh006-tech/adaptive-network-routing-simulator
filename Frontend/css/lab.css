@@ -1,8 +1,3 @@
-/* =========================================================
-   NETROUTE — NETWORK LAB
-   Complete stylesheet
-========================================================= */
-
 /* -------------------------
    1. THEME VARIABLES
 ------------------------- */
@@ -24,7 +19,6 @@
     --lab-radius: 16px;
     --lab-shadow: 0 14px 40px rgba(0, 0, 0, 0.08);
 }
-
 /* -------------------------
    2. RESET AND BASE
 ------------------------- */
@@ -66,7 +60,6 @@ select,
 textarea {
     font: inherit;
 }
-
 button {
     color: inherit;
 }
@@ -112,7 +105,6 @@ select:disabled {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
 }
-
 .brand {
     display: inline-flex;
     flex-shrink: 0;
@@ -141,7 +133,7 @@ select:disabled {
     color: var(--lab-text);
     font-size: 16px;
     font-weight: 850;
-    letterletter-spacing: 1.7px;
+    letter-spacing: 1.7px;
 }
 
 /* Navigation */
@@ -153,7 +145,6 @@ select:disabled {
     flex-wrap: wrap;
     gap: 5px;
 }
-
 .main-nav a {
     display: inline-flex;
     align-items: center;
@@ -205,7 +196,6 @@ select:disabled {
     width: 7px;
     height: 7px;
     flex-shrink: 0;
-
     border-radius: 50%;
     background: var(--lab-green);
 }
@@ -235,16 +225,15 @@ select:disabled {
     color: var(--lab-indigo-light);
     font-size: 10px;
     font-weight: 850;
-    letterletter-spacing: 1.8px;
+    letter-spacing: 1.8px;
 }
-
 .lab-heading h1 {
     margin: 0;
 
     color: var(--lab-text);
     font-size: clamp(30px, 4vw, 43px);
     font-weight: 850;
-    letterletter-spacing: -1.7px;
+    letter-spacing: -1.7px;
     line-height: 1.15;
 }
 
@@ -260,7 +249,6 @@ select:disabled {
     font-size: 14px;
     line-height: 1.7;
 }
-
 /* -------------------------
    5. BUTTONS
 ------------------------- */
@@ -294,7 +282,6 @@ select:disabled {
 .btn:hover {
     transform: translateY(-1px);
 }
-
 .btn:active {
     transform: translateY(0);
 }
@@ -334,7 +321,6 @@ select:disabled {
     background: rgba(16, 185, 129, 0.1);
     color: var(--lab-green);
 }
-
 .btn-success:hover {
     background: rgba(16, 185, 129, 0.18);
 }
@@ -377,7 +363,6 @@ select:disabled {
     font-size: 16px;
     font-weight: 750;
 }
-
 .icon-btn:hover {
     border-color: var(--lab-indigo-light);
 }
@@ -408,7 +393,6 @@ select:disabled {
     background: var(--lab-panel);
     color: var(--lab-text);
 }
-
 .metric-card::after {
     position: absolute;
     top: -30px;
@@ -438,14 +422,13 @@ select:disabled {
     color: var(--lab-text);
     font-size: 29px;
     font-weight: 850;
-    letterletter-spacing: -0.8px;
+    letter-spacing: -0.8px;
     line-height: 1.2;
 }
 
 .metric-note {
     font-size: 10px;
 }
-
 /* -------------------------
    7. WORKSPACE
 ------------------------- */
@@ -486,7 +469,6 @@ select:disabled {
     justify-content: space-between;
     gap: 14px;
 }
-
 .panel-heading h2,
 .section-heading h2,
 .network-panel-header h2 {
@@ -495,7 +477,7 @@ select:disabled {
     color: var(--lab-text);
     font-size: 16px;
     font-weight: 800;
-    letterletter-spacing: -0.3px;
+    letter-spacing: -0.3px;
     line-height: 1.3;
 }
 
@@ -508,7 +490,6 @@ select:disabled {
 .compact-heading {
     margin-bottom: 16px;
 }
-
 /* -------------------------
    8. CONTROL INPUTS
 ------------------------- */
@@ -528,7 +509,8 @@ select:disabled {
     font-weight: 750;
 }
 
-.control-group select {
+.control-group select,
+.control-group input {
     display: block;
     width: 100%;
     min-width: 0;
@@ -544,9 +526,10 @@ select:disabled {
 
     font-size: 12px;
 }
-
-.control-group select:focus {
+.control-group select:focus,
+.control-group input:focus {
     border-color: var(--lab-indigo-light);
+    outline: none;
 }
 
 .field-hint {
@@ -589,7 +572,6 @@ select:disabled {
     font-size: 10px;
     line-height: 1.65;
 }
-
 /* -------------------------
    9. NETWORK PANEL
 ------------------------- */
@@ -622,7 +604,6 @@ select:disabled {
     min-width: 54px;
     font-size: 10px;
 }
-
 /* Legend */
 
 .network-legend {
@@ -658,7 +639,6 @@ select:disabled {
     height: 3px;
     background: var(--lab-green);
 }
-
 .legend-dot {
     display: inline-block;
     width: 8px;
@@ -699,7 +679,6 @@ select:disabled {
 
     background-size: 25px 25px;
 }
-
 .network-viewport {
     width: 100%;
     min-width: 0;
@@ -717,7 +696,6 @@ select:disabled {
 
     overflow: visible;
 }
-
 /* -------------------------
    10. NETWORK LINKS
 ------------------------- */
@@ -754,7 +732,6 @@ select:disabled {
     stroke: var(--lab-yellow);
     stroke-width: 3;
 }
-
 .link-cost {
     fill: var(--lab-text);
     stroke: var(--lab-bg);
@@ -775,7 +752,6 @@ select:disabled {
     fill: var(--lab-red);
     opacity: 0.65;
 }
-
 /* -------------------------
    11. ROUTER NODES
 ------------------------- */
@@ -822,7 +798,6 @@ select:disabled {
     font-weight: 850;
     text-anchor: middle;
 }
-
 .router-node .router-sub-label {
     fill: var(--lab-muted);
 
@@ -903,7 +878,6 @@ select:disabled {
     stroke-width: 2;
     stroke-linecap: round;
 }
-
 .endpoint-label {
     fill: var(--lab-text);
 
@@ -937,7 +911,6 @@ select:disabled {
 
     background: var(--lab-panel-light);
 }
-
 .summary-icon {
     display: grid;
     flex-shrink: 0;
@@ -985,8 +958,6 @@ select:disabled {
     color: var(--lab-red);
 }
 
-/* -------------------------
-   14. ALGORITHM COMPARISON
 ------------------------- */
 
 .comparison-panel {
@@ -1049,7 +1020,6 @@ select:disabled {
 .comparison-row .comparison-cost.unreachable {
     color: var(--lab-red);
 }
-
 .comparison-row p {
     margin: 0;
 
@@ -1102,7 +1072,6 @@ select:disabled {
 
     margin-bottom: 17px;
 }
-
 .router-detail-icon {
     display: grid;
     flex-shrink: 0;
@@ -1144,7 +1113,6 @@ select:disabled {
     font-size: 10px;
     font-weight: 800;
 }
-
 .device-status.failed {
     color: var(--lab-red);
 }
@@ -1205,7 +1173,6 @@ select:disabled {
 
     font-size: 10px;
 }
-
 .neighbor-chip.inactive {
     border-color: var(--lab-red);
     color: var(--lab-red);
@@ -1273,7 +1240,6 @@ select:disabled {
 .log-entry.success .log-message {
     color: var(--lab-green);
 }
-
 /* -------------------------
    17. FOOTER
 ------------------------- */
@@ -1317,7 +1283,6 @@ select:disabled {
         min-height: 370px;
     }
 }
-
 /* -------------------------
    19. MOBILE NAVIGATION
 ------------------------- */
@@ -1359,6 +1324,7 @@ select:disabled {
     }
 
     .control-panel > #simulateBtn,
+    .control-panel > #processPacketsBtn,
     .control-panel > .link-failure-group {
         grid-column: 1 / -1;
     }
@@ -1375,7 +1341,6 @@ select:disabled {
         min-height: 340px;
     }
 }
-
 /* -------------------------
    20. PHONE
 ------------------------- */
@@ -1388,7 +1353,7 @@ select:disabled {
 
     .brand-name {
         font-size: 14px;
-        letterletter-spacing: 1px;
+        letter-spacing: 1px;
     }
 
     .lab-status {
@@ -1434,7 +1399,7 @@ select:disabled {
 
     .metric-card strong {
         font-size: 25px;
-    }
+        }
 
     .metric-label {
         font-size: 10px;
@@ -1517,7 +1482,6 @@ select:disabled {
         gap: 7px;
     }
 }
-
 /* -------------------------
    21. SMALL PHONE
 ------------------------- */
@@ -1565,7 +1529,6 @@ select:disabled {
         transition-duration: 0.01ms !important;
     }
 }
-
 /* =========================================================
    NETROUTE LAB — ROUTER-TO-ROUTER UPDATE
    Remove PC endpoint visuals
